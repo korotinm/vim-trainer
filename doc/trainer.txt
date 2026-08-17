@@ -79,6 +79,13 @@ advances a session (see |:TrainerSession|).
 			with "q", so you set the pace.  Arguments may come in
 			either order; a bare number is the count.
 
+						*:TrainerHint*
+:TrainerHint		Reveal the hint of the goal drill in the current
+			buffer.  Hints are never shown on their own — seeing
+			"ciw" above the task leaves nothing to solve.  Inside
+			a drill <F1> does the same; from Insert mode press
+			<Esc> first.
+
 						*:TrainerStop*
 :TrainerStop		Abandon the running session.  Drills already finished
 			stay in the statistics.
@@ -169,7 +176,8 @@ Fields ~
 		the keys engine, where it overrides the derived results —
 		useful when replaying "targets" would not be reliable.
 		Trailing whitespace is ignored on every line.
-	hint	goal engine only, optional: shown together with the task.
+	hint	goal engine only, optional: revealed by |:TrainerHint|, never
+		shown before you ask for it.
 	tags	Optional list of strings, used by |:Trainer| {tag}.
 
 An invalid entry is reported and skipped; the rest of the catalog still
