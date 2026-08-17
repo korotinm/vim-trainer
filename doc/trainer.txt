@@ -178,7 +178,28 @@ Fields ~
 		Trailing whitespace is ignored on every line.
 	hint	goal engine only, optional: revealed by |:TrainerHint|, never
 		shown before you ask for it.
-	tags	Optional list of strings, used by |:Trainer| {tag}.
+	tags	Optional list of strings, used by |:Trainer| {tag}.  Pick from
+		the vocabulary below, one or two per drill.
+
+Tags ~
+						*trainer-tags*
+Both engines judge the buffer text, so a drill has to end in a text difference.
+A key that only moves the cursor, sets a mark, folds a region or switches
+window changes nothing either engine can see, and no drill should rely on it —
+which is why this list is short: >
+
+	operators	d c y > = gu gU with a motion or a text object
+	text-objects	iw aw i( a" ip it
+	editing		single edits: x r J >> ~ . u CTRL-R
+	modes		i a I A o O gi R — the insert is the change
+	replace		:s///, :g, &
+	visual		v V CTRL-V plus an edit on the selection
+	macros		q and @, when the macro edits
+	registers	"ay and "ap — the drill has to end in a put
+<
+The first tag says what kind of move it is, the second narrows the construct:
+`ciw` is "operators" plus "text-objects".  Add a new tag only once three drills
+would carry it; below that it is a longer name for the id.
 
 An invalid entry is reported and skipped; the rest of the catalog still
 loads.  Duplicate ids are refused, the first one wins.
