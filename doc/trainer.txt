@@ -1,0 +1,254 @@
+*trainer.txt*	Drills for Vim keys, with scoring		*vim-trainer*
+
+Author:  korotinm
+License: same terms as Vim itself (see |license|)
+
+==============================================================================
+CONTENTS					*trainer-contents*
+
+	1. Introduction .............. |trainer-intro|
+	2. Commands .................. |trainer-commands|
+	3. Mappings .................. |trainer-mappings|
+	4. Drills .................... |trainer-drills|
+	5. Progress .................. |trainer-progress|
+	6. Configuration ............. |trainer-config|
+	7. API ....................... |trainer-api|
+	8. Requirements .............. |trainer-requirements|
+
+==============================================================================
+1. INTRODUCTION					*trainer-intro*
+
+vim-trainer opens a scratch buffer with a small task ("delete the word under
+the cursor"), checks how you solved it, and keeps score across sessions.
+
+Both engines judge the buffer you end up with, never the keys you happened to
+press — any route to the right text counts.  They differ in how they watch:
+
+keys	Reads your keystrokes with |getcharstr()| and replays the whole
+	sequence on the buffer after every key, so you see the effect as you
+	type and the plugin can count keystrokes.  Used for commands that
+	stay in Normal mode: `dw`, `D`, `J`, `>>`.  <Esc> skips the drill,
+	which also means solutions that need <Esc> belong in a goal drill.
+
+goal	Lets you edit the buffer freely and compares the result once you
+	stop.  Used where keystrokes cannot be captured because you end up in
+	Insert mode or on the command line: `ciw`, `di"`, `:s/…`.
+
+						*trainer-par*
+A keys drill also reports how economical you were.  "par" is the length of the
+shortest answer in "targets"; solving in more keys still counts as solved, but
+the message shows the shorter way: >
+
+	Correct: daw (3 keys, par 2: dw, daw, de)
+
+To stop drills being ground out one `x` at a time, the keys engine gives up
+after par * 4 keystrokes (at least par + 6) and records a miss.
+
+Every drill opens in a split.  Press "q" to close it — that is also what
+advances a session (see |:TrainerSession|).
+
+==============================================================================
+2. COMMANDS					*trainer-commands*
+
+						*:Trainer*
+:Trainer		Run a random drill from the catalog.
+
+:Trainer {id}		Run one specific drill, e.g. >
+			:Trainer delete-word
+<
+:Trainer {tag}		Run a random drill carrying {tag}, e.g. >
+			:Trainer text-objects
+<
+:Trainer weak		Run a random drill among those not yet solved every
+			time — never attempted ones count as weak.  If every
+			drill is at 100%, the whole catalog is used.
+			"weak" is reserved: a drill with that id is shadowed.
+
+			Completion offers all ids, all tags and "weak".
+
+						*:TrainerSession*
+:TrainerSession [n] [id|tag|weak]
+			Run {n} drills in a row (default 5) and report the
+			score at the end.  The optional second argument
+			restricts the pool exactly like |:Trainer|. >
+			:TrainerSession
+			:TrainerSession 10
+			:TrainerSession 10 weak
+<
+			The next drill starts when you close the current one
+			with "q", so you set the pace.  Arguments may come in
+			either order; a bare number is the count.
+
+						*:TrainerStop*
+:TrainerStop		Abandon the running session.  Drills already finished
+			stay in the statistics.
+
+						*:TrainerStats*
+:TrainerStats		Show totals, current and best streak, and a per-drill
+			table sorted weakest first.  "q" closes it.
+
+						*:TrainerResetStats*
+:TrainerResetStats	Erase all progress, after a confirmation prompt.
+:TrainerResetStats!	Erase without asking.
+
+						*:TrainerList*
+:TrainerList		List the catalog: id, engine, description, tags.
+
+						*:TrainerReload*
+:TrainerReload		Re-read the drills file.  Use it after editing the
+			catalog — it is cached for the whole Vim session.
+
+						*:TrainerCheat*
+:TrainerCheat		Open the keymap cheatsheet in a vertical split.  It is
+			a read-only copy, so the shipped file is never locked
+			or modified.  "q" closes it.
+
+==============================================================================
+3. MAPPINGS					*trainer-mappings*
+
+The plugin defines these Normal-mode mappings:
+
+	<leader>tt	|:Trainer|
+	<leader>tw	:Trainer weak
+	<leader>ts	|:TrainerSession|
+	<leader>tp	|:TrainerStats|
+	<leader>tl	|:TrainerList|
+	<leader>th	|:TrainerCheat|
+
+Inside any drill, statistics or cheatsheet buffer, "q" closes the window.
+In a keys drill <Esc> skips the exercise; a skip is not counted as an attempt.
+
+==============================================================================
+4. DRILLS					*trainer-drills*
+
+Drills are data, not code: they live in a JSON file (|g:trainer_drills|), so
+adding an exercise means adding an object, never touching the plugin.
+
+	[
+	  {
+	    "id": "delete-word",
+	    "engine": "keys",
+	    "desc": "Delete the word under the cursor",
+	    "start": "the quick brown fox",
+	    "targets": ["dw", "daw", "de"],
+	    "tags": ["operators", "words"]
+	  },
+	  {
+	    "id": "change-word",
+	    "engine": "goal",
+	    "desc": "Change \"brown\" to \"red\"",
+	    "start": "the brown fox",
+	    "goal": "the red fox",
+	    "hint": "ciw",
+	    "tags": ["operators", "text-objects"]
+	  }
+	]
+
+Fields ~
+	id	Unique identifier.  Shown in |:TrainerList| and used as the
+		key in the progress file, so renaming it loses that history.
+	engine	"keys" or "goal", see |trainer-intro|.
+	desc	The task, echoed above the drill buffer.
+	start	Starting text.  "\n" makes it several lines.
+	targets	keys engine only: the reference answers.  They are not a
+		whitelist — each one is replayed on the starting text when the
+		drill opens, and any keys of yours that reach one of those
+		results count as correct.  `dW` and `4x` therefore solve a `dw`
+		drill, while `d2w` does not: it deletes a word too many, so
+		the text differs.  List several answers when they genuinely
+		lead to different but equally right results, like `dw` and
+		`de`.  The shortest one sets |trainer-par|.
+	goal	The expected text.  Required by the goal engine.  Optional for
+		the keys engine, where it overrides the derived results —
+		useful when replaying "targets" would not be reliable.
+		Trailing whitespace is ignored on every line.
+	hint	goal engine only, optional: shown together with the task.
+	tags	Optional list of strings, used by |:Trainer| {tag}.
+
+An invalid entry is reported and skipped; the rest of the catalog still
+loads.  Duplicate ids are refused, the first one wins.
+
+==============================================================================
+5. PROGRESS					*trainer-progress*
+
+Results are stored as JSON in |g:trainer_state|, written when a drill buffer
+is closed — that is the one moment both engines have in common.
+
+	{"drills": {"delete-word": {"attempts": 3, "solved": 2,
+	                            "last": 1786982867}},
+	 "streak": 2, "best": 5, "total_ok": 11, "total_try": 14}
+
+Counting ~
+	correct		attempt +1, solved +1, streak +1 (and "best" if the
+			streak is now a record).  Being over |trainer-par| is
+			still correct; only the message mentions it.
+	wrong		attempt +1, streak back to 0 — in a keys drill that
+			means running out of keystrokes
+	skipped		nothing at all — <Esc> or closing an untouched drill
+			must not spoil the statistics
+
+A file that cannot be parsed is reported and replaced by an empty one; unknown
+keys from a future version are dropped, missing keys keep their defaults.
+
+==============================================================================
+6. CONFIGURATION				*trainer-config*
+
+						*g:trainer_drills*
+The drills catalog. >
+	let g:trainer_drills = expand('~/dotfiles/my-drills.json')
+<
+						*g:trainer_cheatsheet*
+The file shown by |:TrainerCheat|.  Any format; it is displayed as markdown. >
+	let g:trainer_cheatsheet = expand('~/dotfiles/vim-keys.md')
+<
+						*g:trainer_state*
+Where progress is stored.  Defaults to >
+	$XDG_STATE_HOME/vim-trainer/progress.json
+<
+falling back to "~/.local/state/vim-trainer/progress.json" when
+$XDG_STATE_HOME is empty.  The directory is created on the first write. >
+	let g:trainer_state = expand('~/dotfiles/vim-trainer.json')
+<
+						*g:loaded_trainer*
+Set it before the plugin loads to disable it entirely. >
+	let g:loaded_trainer = 1
+<
+All variables must be set before the plugin is sourced, i.e. in your vimrc.
+
+==============================================================================
+7. API						*trainer-api*
+
+						*trainer#run()*
+trainer#run([{filter}])		Run a random drill, optionally restricted by
+				id, tag or "weak".
+
+						*trainer#session()*
+trainer#session({args})		Start a session; {args} is the raw argument
+				string of |:TrainerSession|.
+
+						*trainer#start()*
+trainer#start({drill})		Run one drill given as a dictionary in the
+				|trainer-drills| format.
+
+						*trainer#challenge()*
+trainer#challenge({desc}, {start}, {targets} [, {goal}])
+				Keys engine, called directly.  Returns 1 on a
+				correct answer, 0 otherwise.  {goal} overrides
+				the results derived from {targets}.
+
+						*trainer#goal()*
+trainer#goal({desc}, {start}, {goal}, {hint})
+				Goal engine, called directly.  Returns at once:
+				the answer is checked asynchronously.
+
+Drills started through |trainer#challenge()| or |trainer#goal()| are not part
+of the catalog and are therefore not scored.
+
+==============================================================================
+8. REQUIREMENTS					*trainer-requirements*
+
+Vim 8.2 or newer, built with |+timers| and |json_decode()|.  The keys engine
+needs |getcharstr()|, which is why older Vim versions will not do.  Neovim is
+untested.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:
