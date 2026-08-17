@@ -3,11 +3,7 @@
 Drills for Vim keys, with scoring. A drill opens in a scratch split, you solve
 it, the plugin checks the answer and keeps score across sessions.
 
-```
-Change "brown" to "red"   (<F1> for a hint, q to close)
-
-the brown fox
-```
+![Demo](media/demo.gif)
 
 ## Two engines
 
