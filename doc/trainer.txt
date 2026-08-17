@@ -284,7 +284,6 @@ of the catalog and are therefore not scored.
 8. REQUIREMENTS					*trainer-requirements*
 
 Vim 8.2 or newer, built with |+timers| and |json_decode()|.  The keys engine
-needs |getcharstr()|, which is why older Vim versions will not do.  Neovim is
-untested.
+needs |getcharstr()|, which is why older Vim versions will not do.
 
  vim:tw=78:ts=8:noet:ft=help:norl:
