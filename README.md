@@ -85,10 +85,14 @@ change-word                   2         3    66%   today
 delete-word                   4         4   100%   today
 ```
 
-## Adding drills
+## Adding drills — and sending them back
 
-Drills are data. [`data/drills.json`](data/drills.json) is a list of objects;
-adding an exercise never means touching the code.
+**This is the easiest thing to contribute, and the most useful.** A drill is a
+JSON object, not code: if you keep forgetting a command, add it to
+[`data/drills.json`](data/drills.json) and open a merge request. No Vimscript
+involved, no build step, nothing to learn beyond the fields below.
+
+The file is a plain list of objects:
 
 ```json
 {
@@ -112,6 +116,17 @@ the drill opens, and anything you type that reaches one of those results counts.
 List several only when they lead to genuinely different but equally correct
 text — `dw` and `de` differ by a leading space, so both are listed. The shortest
 one sets par. A `goal` on a keys drill overrides the derived results.
+
+### Sending a drill upstream
+
+1. Add your object to [`data/drills.json`](data/drills.json), with a unique
+   `id` and a `tags` list that matches the existing ones.
+2. `:TrainerReload`, then `:Trainer <your-id>` — solve it once, and for a keys
+   drill try a second route to the same text to check `targets` is honest.
+3. Open a merge request with just that file changed.
+
+Good drills come from your own misses: the command you look up every time, the
+text object you never reach for. `:TrainerStats` shows which ones those are.
 
 ## Progress
 

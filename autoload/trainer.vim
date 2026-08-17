@@ -1,6 +1,6 @@
-" ─── каталог ────────────────────────────────────────────────────────────────
-" сами дриллы лежат в data/drills.json: добавить упражнение = дописать объект
-" туда, трогать код не нужно
+" ─── catalog ────────────────────────────────────────────────────────────────
+" the drills themselves live in data/drills.json: adding an exercise means
+" adding an object there, not touching this file
 let s:drills = []
 let s:last_id = ''
 let s:seed = exists('*srand') ? srand() : []
@@ -9,7 +9,7 @@ function! s:fail(msg) abort
   echohl ErrorMsg | echomsg 'vim-trainer: ' . a:msg | echohl NONE
 endfunction
 
-" проверка одной записи: пустая строка — всё в порядке, иначе текст ошибки
+" checks one entry: empty string means it is fine, otherwise the error text
 function! s:validate(d, i) abort
   if type(a:d) != v:t_dict
     return 'entry ' . a:i . ' is not an object'
@@ -57,7 +57,7 @@ function! s:load() abort
   let l:i = 0
   for l:d in l:data
     let l:err = s:validate(l:d, l:i)
-    " битая запись не должна ронять весь каталог — жалуемся и идём дальше
+    " one broken entry must not take down the catalog: complain and move on
     if !empty(l:err)
       call s:fail(l:err)
     elseif has_key(l:seen, l:d.id)
@@ -84,12 +84,12 @@ function! s:rand(n) abort
   return str2nr(matchstr(reltimestr(reltime()), '\.\zs\d\+')) % a:n
 endfunction
 
-" аргумент — id, тег, «weak» или пусто (весь каталог)
+" the argument is an id, a tag, "weak", or empty for the whole catalog
 function! s:pool(arg) abort
   let l:all = s:load()
   if empty(a:arg) | return copy(l:all) | endif
   if a:arg ==# 'weak'
-    " нерешённые и те, где хоть раз ошиблись; если таких нет — весь каталог
+    " never solved, or missed at least once; if none, fall back to everything
     let l:weak = filter(copy(l:all), {_, d -> s:rate(d.id) < 1.0})
     return empty(l:weak) ? copy(l:all) : l:weak
   endif
@@ -99,7 +99,7 @@ function! s:pool(arg) abort
 endfunction
 
 function! s:pick(pool) abort
-  " не повторяем предыдущий дрилл, пока есть из чего выбирать
+  " never hand out the same drill twice in a row while there is a choice
   let l:pool = len(a:pool) > 1
         \ ? filter(copy(a:pool), {_, d -> d.id !=# s:last_id})
         \ : a:pool
@@ -111,7 +111,7 @@ function! trainer#run(...) abort
   let l:arg = a:0 ? trim(a:1) : ''
   let l:pool = s:pool(l:arg)
   if empty(l:pool)
-    if !empty(s:drills)          " каталог цел, просто ничего не совпало
+    if !empty(s:drills)          " the catalog is fine, nothing just matched
       call s:fail('no drill matching "' . l:arg . '"')
     endif
     return 0
@@ -119,12 +119,12 @@ function! trainer#run(...) abort
   return trainer#start(s:pick(l:pool))
 endfunction
 
-" запустить конкретный дрилл (словарь из каталога)
+" run one specific drill, given as a dictionary from the catalog
 function! trainer#start(drill) abort
   let s:last_id = a:drill.id
-  let s:pending_id = a:drill.id      " s:open_drill подхватит и заведёт счётчик
+  let s:pending_id = a:drill.id      " s:open_drill picks this up and scores it
   if a:drill.engine ==# 'keys'
-    " goal у keys-дрилла необязателен: обычно ожидаемый текст выводится из targets
+    " "goal" is optional here: the expected text is normally derived from targets
     return trainer#challenge(a:drill.desc, a:drill.start, a:drill.targets,
           \ get(a:drill, 'goal', ''))
   endif
@@ -156,10 +156,10 @@ function! trainer#list() abort
   setlocal nowrap nomodifiable
 endfunction
 
-" ─── прогресс ───────────────────────────────────────────────────────────────
-" s:progress держит статистику, s:active — открытые сейчас дриллы (по номеру
-" буфера): результат записывается в момент закрытия буфера, поэтому контекст
-" должен пережить сам буфер и не может лежать в b:
+" ─── progress ───────────────────────────────────────────────────────────────
+" s:progress holds the statistics, s:active the drills open right now, keyed by
+" buffer number: a result is recorded when the buffer closes, so its context has
+" to outlive the buffer and cannot live in b:
 let s:progress = {}
 let s:active = {}
 let s:pending_id = ''
@@ -170,8 +170,8 @@ augroup TrainerDrill
   autocmd VimLeavePre * call s:flush()
 augroup END
 
-" при выходе из Vim BufWipeout по буферам дриллов не приходит — досчитываем
-" вручную, но сессию уже не двигаем: двигать некуда
+" quitting Vim delivers no BufWipeout for the drill buffers, so count them by
+" hand; the session is not advanced, there is nowhere left to advance to
 function! s:flush() abort
   for l:ctx in values(s:active)
     call s:record(l:ctx.id, l:ctx.outcome)
@@ -194,7 +194,7 @@ function! s:state() abort
     return s:progress
   endtry
   if type(l:saved) != v:t_dict | return s:progress | endif
-  " мержим по ключам: файл от прошлой версии не должен ломать новые поля
+  " merge key by key: a file from another version must not break new fields
   for [l:k, l:v] in items(l:saved)
     if has_key(s:progress, l:k) && type(l:v) == type(s:progress[l:k])
       let s:progress[l:k] = l:v
@@ -213,7 +213,7 @@ function! s:save() abort
   endtry
 endfunction
 
-" доля решённого: -1 у дрилла, который ещё ни разу не пробовали
+" solved ratio; -1 for a drill that has never been attempted
 function! s:rate(id) abort
   let l:d = get(s:state().drills, a:id, {})
   if get(l:d, 'attempts', 0) == 0 | return -1.0 | endif
@@ -221,8 +221,8 @@ function! s:rate(id) abort
 endfunction
 
 function! s:record(id, outcome) abort
-  if empty(a:id) | return | endif        " дрилл запущен мимо каталога
-  if a:outcome ==# 'skip' | return | endif  " Esc не должен портить статистику
+  if empty(a:id) | return | endif         " drill started outside the catalog
+  if a:outcome ==# 'skip' | return | endif  " Esc must not spoil the statistics
   let l:st = s:state()
   let l:d = get(l:st.drills, a:id, {'attempts': 0, 'solved': 0, 'last': 0})
   let l:d.attempts += 1
@@ -246,7 +246,7 @@ function! s:mark(buf, outcome) abort
   endif
 endfunction
 
-" буфер дрилла закрыли — только здесь результат попадает в статистику
+" the drill buffer is gone: the only place where a result reaches the stats
 function! s:closed(buf) abort
   if !has_key(s:active, a:buf) | return | endif
   let l:ctx = remove(s:active, a:buf)
@@ -260,7 +260,7 @@ function! s:score_line() abort
         \ l:st.total_ok, l:st.total_try, l:st.streak, l:st.best)
 endfunction
 
-" ─── сессия ─────────────────────────────────────────────────────────────────
+" ─── session ────────────────────────────────────────────────────────────────
 " :TrainerSession [n] [id|tag|weak]
 function! trainer#session(args) abort
   let l:count = 5
@@ -304,7 +304,7 @@ function! s:tally(outcome) abort
   if s:session.left > 0
     echo printf('Session %d/%d — %d correct, next drill…',
           \ s:session.total - s:session.left, s:session.total, s:session.ok)
-    " следующий дрилл нельзя открывать прямо из BufWipeout — уходим в таймер
+    " a window cannot be opened from inside BufWipeout: hand it to a timer
     call timer_start(60, {-> s:next()})
   else
     let l:done = s:session
@@ -316,7 +316,7 @@ function! s:tally(outcome) abort
   endif
 endfunction
 
-" ─── статистика ─────────────────────────────────────────────────────────────
+" ─── statistics ─────────────────────────────────────────────────────────────
 function! s:ago(ts) abort
   if a:ts == 0 | return 'never' | endif
   let l:days = (localtime() - a:ts) / 86400
@@ -328,7 +328,7 @@ function! trainer#stats() abort
   if empty(l:drills) | return | endif
   let l:st = s:state()
 
-  " слабые сверху: сперва нетронутые, потом с худшим процентом
+  " weakest first: never attempted, then whatever has the worst rate
   let l:rows = sort(copy(l:drills), {a, b -> s:rate(a.id) == s:rate(b.id)
         \ ? 0 : (s:rate(a.id) < s:rate(b.id) ? -1 : 1)})
 
@@ -364,24 +364,24 @@ function! trainer#reset(bang) abort
   echo 'vim-trainer: progress reset'
 endfunction
 
-" ─── движки ─────────────────────────────────────────────────────────────────
+" ─── engines ────────────────────────────────────────────────────────────────
 function! s:strip(lines) abort
   return map(copy(a:lines), 'substitute(v:val, "\\s\\+$", "", "")')
 endfunction
 
-" прогон набранного с чистого листа: буфер откатывается к исходному тексту и
-" вся последовательность проигрывается заново. так незавершённые команды
-" (одинокое d) просто ничего не делают, а промежуточные состояния остаются
-" честными — без этого пришлось бы гадать, что делать с висящим оператором
+" replay what has been typed from scratch: the buffer is rolled back to the
+" starting text and the whole sequence runs again. that way an unfinished
+" command (a lone d) simply does nothing and the intermediate states stay
+" honest — otherwise a pending operator would be anyone's guess
 function! s:apply(start, keys) abort
   silent! keepjumps %delete _
   call setline(1, split(a:start, "\n"))
   call cursor(1, 1)
-  " Esc в конце закрывает незавершённый ввод: cw…, висящий оператор, счётчик
+  " the trailing Esc closes whatever is unfinished: cw…, a pending operator, a count
   call feedkeys(a:keys . "\<Esc>", 'nx')
 endfunction
 
-" сравниваем сами: index() сверял бы строки с оглядкой на 'ignorecase'
+" compare by hand: index() would match strings with an eye on 'ignorecase'
 function! s:matches(lines, wants) abort
   for l:want in a:wants
     if a:lines ==# l:want | return 1 | endif
@@ -389,7 +389,7 @@ function! s:matches(lines, wants) abort
   return 0
 endfunction
 
-" эталонный результат: прогоняем один из targets и запоминаем, что вышло
+" reference result: replay one of the targets and keep whatever came out
 function! s:derive(start, keys) abort
   call s:apply(a:start, a:keys)
   let l:want = s:strip(getline(1, '$'))
@@ -397,42 +397,43 @@ function! s:derive(start, keys) abort
   return l:want
 endfunction
 
-" общий каркас дрилла: скретч в сплите + q на выход, как в справке Vim
+" shared frame for every drill: a scratch split plus q to close, as in Vim help
 function! s:open_drill(start) abort
   new
   setlocal buftype=nofile bufhidden=wipe noswapfile
-  " буфер после верного ответа становится nomodifiable — без этого из него не выйти
+  " after a correct answer the buffer turns nomodifiable — without this mapping
+  " there is no way out of it
   nnoremap <silent> <buffer> q :bwipeout!<CR>
   call setline(1, split(a:start, "\n"))
   call cursor(1, 1)
-  " по умолчанию дрилл считается пропущенным, пока движок не скажет иначе
+  " a drill counts as skipped until an engine says otherwise
   let s:active[bufnr('%')] = {'id': s:pending_id, 'outcome': 'skip'}
   let s:pending_id = ''
   execute 'autocmd TrainerDrill BufWipeout <buffer> call s:closed(' . bufnr('%') . ')'
 endfunction
 
-" движок 1: клавиши применяются к буферу, засчитывается результат (dw, D, J, >>)
-" targets — эталонные ответы: по ним считается «пар» и берётся ожидаемый текст,
-" но принимается любой способ, который приводит буфер к тому же виду
+" engine 1: keys are applied to the buffer and the result is what counts
+" (dw, D, J, >>). targets are the reference answers: they set par and provide
+" the expected text, but any route to the same buffer is accepted
 function! trainer#challenge(desc, start, targets, ...) abort
   call s:open_drill(a:start)
   let l:buf = bufnr('%')
 
-  " эталонов может быть несколько: dw и de оба «удаляют слово», но оставляют
-  " разный текст, и оба должны засчитываться
+  " there can be several reference results: dw and de both "delete a word" but
+  " leave different text behind, and both have to count
   let l:wants = a:0 && !empty(a:1)
         \ ? [s:strip(split(a:1, "\n"))]
         \ : map(copy(a:targets), 's:derive(a:start, v:val)')
   let l:par = min(map(copy(a:targets), 'strchars(v:val)'))
-  let l:limit = max([l:par * 4, l:par + 6])   " защита от решения перебором
+  let l:limit = max([l:par * 4, l:par + 6])   " no grinding the answer out
   let l:keys = ''
 
   while 1
     redraw
     echo a:desc . '   [' . l:keys . ']   (Esc to skip)'
     let l:c = getcharstr()
-    " пусто приходит, когда ввода больше не будет (конец скрипта, закрытый
-    " терминал) — без этого цикл крутился бы вхолостую
+    " an empty string means no more input is coming (end of a script, closed
+    " terminal) — without this the loop would spin on nothing
     if l:c ==# "\<Esc>" || empty(l:c)
       call s:mark(l:buf, 'skip')
       call s:apply(a:start, '')
@@ -441,9 +442,9 @@ function! trainer#challenge(desc, start, targets, ...) abort
       return 0
     endif
     let l:keys .= l:c
-    " добираем всё, что человек успел настучать: иначе feedkeys ниже съест
-    " остаток из typeahead и мы разойдёмся с тем, что реально в буфере.
-    " счётчик — страховка от источника ввода, который никогда не пустеет
+    " pick up everything already typed ahead: otherwise the feedkeys below eats
+    " the rest of the typeahead and we drift apart from the actual buffer.
+    " the counter guards against an input source that never runs dry
     let l:drain = 0
     while l:drain < 32
       let l:extra = getcharstr(0)
@@ -488,13 +489,13 @@ function! trainer#hint() abort
   echohl MoreMsg | echo 'hint: ' . b:trainer_hint | echohl NONE
 endfunction
 
-" движок 2: проверка результата (для ciw, f{c}, :s/… — где нажатия не ловятся)
+" engine 2: checks the result, for ciw, f{c}, :s/… — where keys cannot be caught
 function! trainer#goal(desc, start, goal, hint) abort
   call s:open_drill(a:start)
   let b:goal = a:goal
-  " подсказка не показывается сама: увидев «ciw», решать уже нечего
+  " the hint stays hidden: once "ciw" is on screen there is nothing left to solve
   let b:trainer_hint = a:hint
-  " своя группа на каждый буфер: параллельные дриллы не гасят друг друга
+  " one augroup per buffer, so parallel drills do not cancel each other
   let b:trainer_group = 'TrainerGoal_' . bufnr('%')
   nnoremap <silent> <buffer> <F1> :TrainerHint<CR>
   redraw
@@ -503,7 +504,7 @@ function! trainer#goal(desc, start, goal, hint) abort
   execute 'augroup ' . b:trainer_group
       autocmd!
       execute 'autocmd TextChanged,TextChangedI <buffer> call s:check_goal(' . bufnr('%') . ')'
-      " буфер закрыли, не решив — группа не должна оставаться висеть
+      " closed without solving: the group must not be left hanging around
       execute 'autocmd BufWipeout <buffer> call timer_start(0, {-> s:drop_group("' . b:trainer_group . '")})'
   augroup END
 endfunction
@@ -518,21 +519,19 @@ function! s:check_goal(buf) abort
     execute 'autocmd! ' . l:group
     unlet b:goal
     call s:mark(a:buf, 'ok')
-    " буфер нельзя править прямо из TextChanged — уходим в таймер,
-    " и запоминаем номер буфера: за 50 мс пользователь может уйти в другой
+    " the buffer cannot be edited from inside TextChanged, so use a timer, and
+    " remember the buffer number: 50ms is enough to walk off into another one
     call timer_start(50, {-> s:announce(a:buf, l:group)})
   endif
 endfunction
 
 function! s:announce(buf, group) abort
   call s:drop_group(a:group)
-  " буфер мог быть закрыт (bufhidden=wipe) за те 50 мс — тогда просто выходим
+  " the buffer may already be gone (bufhidden=wipe) after those 50ms
   if !bufexists(a:buf) | return | endif
-  " ciw/ci" оставляют в insert, а там q печатается буквой и буфер, который мы
-  " сейчас залочим, на неё только ругнётся — выходим в normal за пользователя
-  " ciw/ci" оставляют в insert, а там q печатается буквой в буфер, который мы
-  " сейчас залочим. Esc кладём в очередь без 'x': с 'x' он выполняется прямо
-  " здесь, вложенно, и до пользователя режим normal не доезжает
+  " ciw/ci" leave you in Insert mode, where q is typed as a letter into the
+  " buffer we are about to lock. queue the Esc without 'x': with 'x' it runs
+  " nested, right here, and Normal mode never reaches the user
   if bufnr('%') == a:buf && mode() =~# '^[iR]'
     call feedkeys("\<Esc>", 'n')
   endif
@@ -540,8 +539,8 @@ function! s:announce(buf, group) abort
   call setbufline(a:buf, 1, '✓ CORRECT — ' . get(getbufline(a:buf, 1), 0, ''))
   call setbufvar(a:buf, '&modifiable', 0)
   redraw
-  " сообщение — следующим тиком: выход из insert перерисует командную строку
-  " уже после нас и затрёт всё, что напечатано сейчас
+  " the message goes out on the next tick: leaving Insert redraws the command
+  " line after us and would wipe anything printed now
   call timer_start(30, {-> s:solved_msg()})
 endfunction
 
@@ -549,20 +548,20 @@ function! s:solved_msg() abort
   echohl MoreMsg | echo 'Solved — press q to close' | echohl NONE
 endfunction
 
-" удаляем группу только вне её собственных автокоманд, иначе E936
+" delete the group only outside its own autocommands, otherwise E936
 function! s:drop_group(group) abort
   if !exists('#' . a:group) | return | endif
   execute 'autocmd! ' . a:group
   execute 'augroup! ' . a:group
 endfunction
 
-" номер скретча со шпаргалкой; ищем окно по нему, а не по имени файла:
-" bufnr() со строкой матчит регэкспом, а не путём
+" buffer number of the cheatsheet scratch; the window is looked up by it rather
+" than by file name, because bufnr() matches a string as a regexp, not a path
 let s:cheat_buf = -1
 
-" открыть английскую шпаргалку в сплите
+" open the cheatsheet in a split
 function! trainer#cheatsheet() abort
-  " уже открыта — просто прыгнуть в её окно, не плодить сплиты
+  " already open: jump to its window instead of piling up more splits
   if s:cheat_buf != -1 && bufexists(s:cheat_buf)
     let l:win = bufwinid(s:cheat_buf)
     if l:win != -1
@@ -580,17 +579,17 @@ function! trainer#cheatsheet() abort
     return
   endif
 
-  " показываем копию в скретче, а не сам файл: иначе readonly/nomodifiable
-  " останутся на буфере, когда шпаргалку откроют руками на правку
+  " show a copy in a scratch buffer rather than the file itself: otherwise
+  " readonly/nomodifiable stick to it when the cheatsheet is opened for editing
   vnew
   let s:cheat_buf = bufnr('%')
   call setline(1, readfile(g:trainer_cheatsheet))
   call cursor(1, 1)
   silent! file vim-trainer://cheatsheet
   setlocal buftype=nofile bufhidden=hide noswapfile
-  setlocal filetype=markdown          " подсветка вместо простыни текста
-  setlocal nowrap                      " строки-команды не переносятся уродливо
+  setlocal filetype=markdown          " highlighting instead of a wall of text
+  setlocal nowrap                      " command lines must not wrap raggedly
   setlocal nomodifiable nomodified
-  " q закрывает шпаргалку, как в справке Vim
+  " q closes the cheatsheet, as in Vim's own help
   nnoremap <silent> <buffer> q :close<CR>
 endfunction
