@@ -4,7 +4,7 @@ Drills for Vim keys, with scoring. A drill opens in a scratch split, you solve
 it, the plugin checks the answer and keeps score across sessions.
 
 ```
-Change "brown" to "red"   hint: ciw   (q to close)
+Change "brown" to "red"   (<F1> for a hint, q to close)
 
 the brown fox
 ```
@@ -60,6 +60,7 @@ vim -u NONE -c 'helptags ~/.vim/pack/plugins/start/vim-trainer/doc' -c q
 | `:Trainer text-objects` | random drill with that tag |
 | `:Trainer weak` | random drill among those you keep missing |
 | `:TrainerSession [n] [id\|tag\|weak]` | `n` drills in a row (default 5) with a score |
+| `:TrainerHint` | reveal the hint of the current goal drill (`<F1>` inside it) |
 | `:TrainerStop` | abandon the session |
 | `:TrainerStats` | totals, streak, per-drill table, weakest first |
 | `:TrainerResetStats[!]` | erase progress |

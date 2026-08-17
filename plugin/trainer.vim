@@ -26,6 +26,7 @@ command! -bar -nargs=? -complete=customlist,trainer#complete Trainer
 " :TrainerSession [n] [id|tag|weak] — n дриллов подряд со счётом, по умолчанию 5
 command! -bar -nargs=* -complete=customlist,trainer#complete TrainerSession
       \ call trainer#session(<q-args>)
+command! -bar TrainerHint   call trainer#hint()
 command! -bar TrainerStop   call trainer#stop()
 command! -bar TrainerStats  call trainer#stats()
 command! -bar TrainerList   call trainer#list()

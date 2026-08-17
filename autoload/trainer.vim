@@ -480,14 +480,25 @@ function! trainer#challenge(desc, start, targets, ...) abort
   endwhile
 endfunction
 
+function! trainer#hint() abort
+  if !exists('b:trainer_hint') || empty(b:trainer_hint)
+    echo 'No hint for this drill'
+    return
+  endif
+  echohl MoreMsg | echo 'hint: ' . b:trainer_hint | echohl NONE
+endfunction
+
 " движок 2: проверка результата (для ciw, f{c}, :s/… — где нажатия не ловятся)
 function! trainer#goal(desc, start, goal, hint) abort
   call s:open_drill(a:start)
   let b:goal = a:goal
+  " подсказка не показывается сама: увидев «ciw», решать уже нечего
+  let b:trainer_hint = a:hint
   " своя группа на каждый буфер: параллельные дриллы не гасят друг друга
   let b:trainer_group = 'TrainerGoal_' . bufnr('%')
+  nnoremap <silent> <buffer> <F1> :TrainerHint<CR>
   redraw
-  echo a:desc . (empty(a:hint) ? '' : '   hint: ' . a:hint) . '   (q to close)'
+  echo a:desc . (empty(a:hint) ? '   (q to close)' : '   (<F1> for a hint, q to close)')
 
   execute 'augroup ' . b:trainer_group
       autocmd!
@@ -519,6 +530,9 @@ function! s:announce(buf, group) abort
   if !bufexists(a:buf) | return | endif
   " ciw/ci" оставляют в insert, а там q печатается буквой и буфер, который мы
   " сейчас залочим, на неё только ругнётся — выходим в normal за пользователя
+  " ciw/ci" оставляют в insert, а там q печатается буквой в буфер, который мы
+  " сейчас залочим. Esc кладём в очередь без 'x': с 'x' он выполняется прямо
+  " здесь, вложенно, и до пользователя режим normal не доезжает
   if bufnr('%') == a:buf && mode() =~# '^[iR]'
     call feedkeys("\<Esc>", 'n')
   endif
@@ -526,6 +540,12 @@ function! s:announce(buf, group) abort
   call setbufline(a:buf, 1, '✓ CORRECT — ' . get(getbufline(a:buf, 1), 0, ''))
   call setbufvar(a:buf, '&modifiable', 0)
   redraw
+  " сообщение — следующим тиком: выход из insert перерисует командную строку
+  " уже после нас и затрёт всё, что напечатано сейчас
+  call timer_start(30, {-> s:solved_msg()})
+endfunction
+
+function! s:solved_msg() abort
   echohl MoreMsg | echo 'Solved — press q to close' | echohl NONE
 endfunction
 
