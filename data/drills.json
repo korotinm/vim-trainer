@@ -1,0 +1,52 @@
+[
+  {
+    "id": "delete-word",
+    "engine": "keys",
+    "desc": "Delete the word under the cursor",
+    "start": "the quick brown fox",
+    "targets": ["dw", "daw", "de"],
+    "tags": ["operators", "words"]
+  },
+  {
+    "id": "delete-to-eol",
+    "engine": "keys",
+    "desc": "Delete from the cursor to end of line",
+    "start": "keep this cut the rest",
+    "targets": ["D", "d$"],
+    "tags": ["operators", "motions"]
+  },
+  {
+    "id": "join-lines",
+    "engine": "keys",
+    "desc": "Join this line with the next one",
+    "start": "line one\nline two",
+    "targets": ["J"],
+    "tags": ["editing"]
+  },
+  {
+    "id": "indent-line",
+    "engine": "keys",
+    "desc": "Indent the current line",
+    "start": "shift me right",
+    "targets": [">>"],
+    "tags": ["editing"]
+  },
+  {
+    "id": "change-word",
+    "engine": "goal",
+    "desc": "Change \"brown\" to \"red\"",
+    "start": "the brown fox",
+    "goal": "the red fox",
+    "hint": "ciw",
+    "tags": ["operators", "text-objects"]
+  },
+  {
+    "id": "delete-in-quotes",
+    "engine": "goal",
+    "desc": "Delete everything inside the quotes",
+    "start": "say \"hello world\" now",
+    "goal": "say \"\" now",
+    "hint": "di\"",
+    "tags": ["text-objects"]
+  }
+]

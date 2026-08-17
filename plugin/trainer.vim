@@ -2,33 +2,24 @@ if exists('g:loaded_trainer') | finish | endif
 let g:loaded_trainer = 1
 
 let s:root = expand('<sfile>:p:h:h')
-let g:trainer_cheatsheet = s:root . '/data/cheatsheet_en.md'
 
-" движок 1 — дриллы на хоткеи, тексты английские
-command! TrainerT1 call trainer#challenge(
-  \ 'Delete the word under the cursor',
-  \ 'the quick brown fox', ['dw','daw','de'])
-command! TrainerT2 call trainer#challenge(
-  \ 'Delete from the cursor to end of line',
-  \ 'keep this cut the rest', ['D','d$'])
-command! TrainerT3 call trainer#challenge(
-  \ 'Join this line with the next one',
-  \ "line one\nline two", ['J'])
-command! TrainerT4 call trainer#challenge(
-  \ 'Indent the current line',
-  \ 'shift me right', ['>>'])
+" оба пути переопределяемы: можно подсунуть свой каталог дриллов и свою шпаргалку
+if !exists('g:trainer_cheatsheet')
+  let g:trainer_cheatsheet = s:root . '/data/cheatsheet_en.md'
+endif
+if !exists('g:trainer_drills')
+  let g:trainer_drills = s:root . '/data/drills.json'
+endif
 
-" движок 2 — дриллы на результат
-command! TrainerG1 call trainer#goal(
-  \ 'Change "brown" to "red"',
-  \ 'the brown fox', 'the red fox', 'ciw')
-command! TrainerG2 call trainer#goal(
-  \ 'Delete everything inside the quotes',
-  \ 'say "hello world" now', 'say "" now', 'di"')
+" :Trainer                 — случайный дрилл
+" :Trainer delete-word     — конкретный, по id
+" :Trainer text-objects    — случайный из тега
+" -bar: без него всё после | утекает в аргумент команды
+command! -bar -nargs=? -complete=customlist,trainer#complete Trainer call trainer#run(<q-args>)
+command! -bar TrainerList   call trainer#list()
+command! -bar TrainerReload call trainer#reload()
+command! -bar TrainerCheat  call trainer#cheatsheet()
 
-command! TrainerCheat call trainer#cheatsheet()
-
-nnoremap <silent> <leader>t1 :TrainerT1<CR>
-nnoremap <silent> <leader>t2 :TrainerT2<CR>
-nnoremap <silent> <leader>tg :TrainerG1<CR>
-nnoremap <silent> <leader>th :call trainer#cheatsheet()<CR>
+nnoremap <silent> <leader>tt :Trainer<CR>
+nnoremap <silent> <leader>tl :TrainerList<CR>
+nnoremap <silent> <leader>th :TrainerCheat<CR>
