@@ -43,7 +43,7 @@ Plug 'korotinm/vim-trainer'
 As a native package:
 
 ```bash
-git clone <repo> ~/.vim/pack/plugins/start/vim-trainer
+git clone https://github.com/korotinm/vim-trainer ~/.vim/pack/plugins/start/vim-trainer
 vim -u NONE -c 'helptags ~/.vim/pack/plugins/start/vim-trainer/doc' -c q
 ```
 
