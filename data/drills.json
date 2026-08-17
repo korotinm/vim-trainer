@@ -5,7 +5,7 @@
     "desc": "Delete the word under the cursor",
     "start": "the quick brown fox",
     "targets": ["dw", "daw", "de"],
-    "tags": ["operators", "words"]
+    "tags": ["operators"]
   },
   {
     "id": "delete-to-eol",
@@ -13,7 +13,7 @@
     "desc": "Delete from the cursor to end of line",
     "start": "keep this cut the rest",
     "targets": ["D", "d$"],
-    "tags": ["operators", "motions"]
+    "tags": ["operators"]
   },
   {
     "id": "join-lines",

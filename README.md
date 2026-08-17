@@ -117,6 +117,28 @@ List several only when they lead to genuinely different but equally correct
 text — `dw` and `de` differ by a leading space, so both are listed. The shortest
 one sets par. A `goal` on a keys drill overrides the derived results.
 
+### Tags
+
+Both engines judge the buffer text, so **a drill has to end in a text
+difference** — anything that only moves the cursor, sets a mark, folds a
+region or switches window cannot be checked and does not belong here. That is
+why the vocabulary is short. Use these tags, one or two per drill:
+
+| tag | what it covers |
+|---|---|
+| `operators` | `d` `c` `y` `>` `=` `gu` `gU` with a motion or a text object |
+| `text-objects` | `iw` `aw` `i(` `a"` `ip` `it` |
+| `editing` | single edits: `x` `r` `J` `>>` `~` `.` `u` `Ctrl-r` |
+| `modes` | `i` `a` `I` `A` `o` `O` `gi` `R` — the insert itself is the change |
+| `visual` | `v` `V` `Ctrl-v` **plus** an edit on the selection |
+| `replace` | `:s///`, `:g`, `&` |
+| `macros` | `q` `@`, when the macro edits |
+| `registers` | `"ay` and `"ap` — the drill has to end in a put |
+
+The first tag says what kind of move it is, the second narrows the construct:
+`ciw` is `operators` + `text-objects`. Add a new tag only once three drills
+would carry it; below that it is just a longer name for the `id`.
+
 ### Sending a drill upstream
 
 1. Add your object to [`data/drills.json`](data/drills.json), with a unique
