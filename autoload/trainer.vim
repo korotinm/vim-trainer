@@ -102,19 +102,41 @@ function! s:drop_group(group) abort
   execute 'augroup! ' . a:group
 endfunction
 
+" номер скретча со шпаргалкой; ищем окно по нему, а не по имени файла:
+" bufnr() со строкой матчит регэкспом, а не путём
+let s:cheat_buf = -1
+
 " открыть английскую шпаргалку в сплите
 function! trainer#cheatsheet() abort
-  " если шпаргалка уже открыта — просто прыгнуть в её окно, не плодить сплиты
-  let l:buf = bufnr(g:trainer_cheatsheet)
-  if l:buf != -1 && bufwinnr(l:buf) != -1
-    execute bufwinnr(l:buf) . 'wincmd w'
+  " уже открыта — просто прыгнуть в её окно, не плодить сплиты
+  if s:cheat_buf != -1 && bufexists(s:cheat_buf)
+    let l:win = bufwinid(s:cheat_buf)
+    if l:win != -1
+      call win_gotoid(l:win)
+    else
+      execute 'vertical sbuffer ' . s:cheat_buf
+    endif
     return
   endif
 
-  execute 'vsplit ' . fnameescape(g:trainer_cheatsheet)
+  if !filereadable(g:trainer_cheatsheet)
+    echohl ErrorMsg
+    echo 'Cheatsheet not found: ' . g:trainer_cheatsheet
+    echohl NONE
+    return
+  endif
+
+  " показываем копию в скретче, а не сам файл: иначе readonly/nomodifiable
+  " останутся на буфере, когда шпаргалку откроют руками на правку
+  vnew
+  let s:cheat_buf = bufnr('%')
+  call setline(1, readfile(g:trainer_cheatsheet))
+  call cursor(1, 1)
+  silent! file vim-trainer://cheatsheet
+  setlocal buftype=nofile bufhidden=hide noswapfile
   setlocal filetype=markdown          " подсветка вместо простыни текста
-  setlocal readonly nomodifiable
   setlocal nowrap                      " строки-команды не переносятся уродливо
+  setlocal nomodifiable nomodified
   " q закрывает шпаргалку, как в справке Vim
   nnoremap <silent> <buffer> q :close<CR>
 endfunction
