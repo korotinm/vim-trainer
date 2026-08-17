@@ -18,14 +18,21 @@ function! s:read_combo(targets) abort
   endwhile
 endfunction
 
-" движок 1: проверка нажатой комбинации (для dw, x, dd, J, >> …)
-function! trainer#challenge(desc, start, targets) abort
+" общий каркас дрилла: скретч в сплите + q на выход, как в справке Vim
+function! s:open_drill(start) abort
   new
   setlocal buftype=nofile bufhidden=wipe noswapfile
+  " буфер после верного ответа становится nomodifiable — без этого из него не выйти
+  nnoremap <silent> <buffer> q :bwipeout!<CR>
   call setline(1, split(a:start, "\n"))
   call cursor(1, 1)
+endfunction
+
+" движок 1: проверка нажатой комбинации (для dw, x, dd, J, >> …)
+function! trainer#challenge(desc, start, targets) abort
+  call s:open_drill(a:start)
   redraw
-  echo a:desc . '   (Esc to skip)'
+  echo a:desc . '   (Esc to skip, q to close)'
 
   let [l:status, l:keys] = s:read_combo(a:targets)
 
@@ -47,15 +54,12 @@ endfunction
 
 " движок 2: проверка результата (для ciw, f{c}, :s/… — где нажатия не ловятся)
 function! trainer#goal(desc, start, goal, hint) abort
-  new
-  setlocal buftype=nofile bufhidden=wipe noswapfile
+  call s:open_drill(a:start)
   let b:goal = a:goal
   " своя группа на каждый буфер: параллельные дриллы не гасят друг друга
   let b:trainer_group = 'TrainerGoal_' . bufnr('%')
-  call setline(1, split(a:start, "\n"))
-  call cursor(1, 1)
   redraw
-  echo a:desc . '   hint: ' . a:hint
+  echo a:desc . '   hint: ' . a:hint . '   (q to close)'
 
   execute 'augroup ' . b:trainer_group
       autocmd!
@@ -81,12 +85,14 @@ function! s:check_goal(buf) abort
 endfunction
 
 function! s:announce(buf, group) abort
+  call s:drop_group(a:group)
+  " буфер мог быть закрыт (bufhidden=wipe) за те 50 мс — тогда просто выходим
   if !bufexists(a:buf) | return | endif
   call setbufvar(a:buf, '&modifiable', 1)
-  call setbufline(a:buf, 1, '✓ CORRECT — ' . getbufoneline(a:buf, 1))
+  call setbufline(a:buf, 1, '✓ CORRECT — ' . get(getbufline(a:buf, 1), 0, ''))
   call setbufvar(a:buf, '&modifiable', 0)
-  call s:drop_group(a:group)
   redraw
+  echohl MoreMsg | echo 'Solved — press q to close' | echohl NONE
 endfunction
 
 " удаляем группу только вне её собственных автокоманд, иначе E936
