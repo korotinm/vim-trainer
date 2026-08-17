@@ -106,14 +106,21 @@ advances a session (see |:TrainerSession|).
 ==============================================================================
 3. MAPPINGS					*trainer-mappings*
 
-The plugin defines these Normal-mode mappings:
+The plugin takes no keys of its own — everything is driven by the commands
+above.  What it does define is a set of |<Plug>| names, which cannot be typed
+and are there for you to hang a key on: >
 
-	<leader>tt	|:Trainer|
-	<leader>tw	:Trainer weak
-	<leader>ts	|:TrainerSession|
-	<leader>tp	|:TrainerStats|
-	<leader>tl	|:TrainerList|
-	<leader>th	|:TrainerCheat|
+	nmap <leader>d <Plug>(TrainerRun)
+	nmap <leader>w <Plug>(TrainerWeak)
+<
+	<Plug>(TrainerRun)	|:Trainer|
+	<Plug>(TrainerWeak)	:Trainer weak
+	<Plug>(TrainerSession)	|:TrainerSession|
+	<Plug>(TrainerStats)	|:TrainerStats|
+	<Plug>(TrainerList)	|:TrainerList|
+	<Plug>(TrainerCheat)	|:TrainerCheat|
+
+Use |nmap|, not |nnoremap|: a <Plug> name has to be remapped to work.
 
 Inside any drill, statistics or cheatsheet buffer, "q" closes the window.
 In a keys drill <Esc> skips the exercise; a skip is not counted as an attempt.

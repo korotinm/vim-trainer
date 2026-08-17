@@ -33,9 +33,12 @@ command! -bar TrainerReload call trainer#reload()
 command! -bar TrainerCheat  call trainer#cheatsheet()
 command! -bar -bang TrainerResetStats call trainer#reset(<bang>0)
 
-nnoremap <silent> <leader>tt :Trainer<CR>
-nnoremap <silent> <leader>tw :Trainer weak<CR>
-nnoremap <silent> <leader>ts :TrainerSession<CR>
-nnoremap <silent> <leader>tp :TrainerStats<CR>
-nnoremap <silent> <leader>tl :TrainerList<CR>
-nnoremap <silent> <leader>th :TrainerCheat<CR>
+" клавиш плагин не занимает: <leader> — личное пространство пользователя.
+" эти имена нажать нельзя, они существуют, чтобы было к чему привязаться:
+"   nmap <leader>d <Plug>(TrainerRun)
+nnoremap <silent> <Plug>(TrainerRun)     :Trainer<CR>
+nnoremap <silent> <Plug>(TrainerWeak)    :Trainer weak<CR>
+nnoremap <silent> <Plug>(TrainerSession) :TrainerSession<CR>
+nnoremap <silent> <Plug>(TrainerStats)   :TrainerStats<CR>
+nnoremap <silent> <Plug>(TrainerList)    :TrainerList<CR>
+nnoremap <silent> <Plug>(TrainerCheat)   :TrainerCheat<CR>
