@@ -67,8 +67,17 @@ vim -u NONE -c 'helptags ~/.vim/pack/plugins/start/vim-trainer/doc' -c q
 | `:TrainerReload` | re-read the drills file after editing it |
 | `:TrainerCheat` | keymap cheatsheet in a split |
 
-Mappings: `<leader>tt` random, `<leader>tw` weak, `<leader>ts` session,
-`<leader>tp` stats, `<leader>tl` list, `<leader>th` cheatsheet.
+No keys are taken by default. If you want some, hang them on the `<Plug>` names
+yourself — note `nmap`, not `nnoremap`:
+
+```vim
+nmap <leader>d <Plug>(TrainerRun)
+nmap <leader>w <Plug>(TrainerWeak)
+nmap <leader>s <Plug>(TrainerSession)
+```
+
+Also available: `<Plug>(TrainerStats)`, `<Plug>(TrainerList)`,
+`<Plug>(TrainerCheat)`.
 
 ```
 vim-trainer — 11/14 correct (78%)   streak 2, best 5
