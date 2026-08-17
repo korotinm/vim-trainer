@@ -178,3 +178,7 @@ the rest, including the autoload API.
 
 Vim 8.2+ with `+timers` and `json_decode()`; the keys engine needs
 `getcharstr()`. Neovim is untested.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
