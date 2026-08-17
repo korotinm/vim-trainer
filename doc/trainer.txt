@@ -1,7 +1,7 @@
 *trainer.txt*	Drills for Vim keys, with scoring		*vim-trainer*
 
 Author:  korotinm
-License: same terms as Vim itself (see |license|)
+License: MIT (see the LICENSE file)
 
 ==============================================================================
 CONTENTS					*trainer-contents*
