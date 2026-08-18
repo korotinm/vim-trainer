@@ -1,0 +1,124 @@
+════════════════════════════════════════════════════════════════════
+VIM  QUICK REFERENCE
+Normal mode unless noted   ·   {m} motion  {c} char  {n} count
+════════════════════════════════════════════════════════════════════
+
+┌─ MODES ──────────────────────────────────────────────────────────┐
+│  i / a           insert before / after cursor                   │
+│  I / A           insert at start / end of line                  │
+│  o / O           open line below / above                        │
+│  v / V           visual: chars / lines                          │
+│  Ctrl-v          visual block (columns)                         │
+│  R               replace mode                                   │
+│  Esc / Ctrl-[    back to Normal                                 │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ MOTIONS ────────────────────────────────────────────────────────┐
+│  h j k l         left / down / up / right                       │
+│  w / b           next / previous word                           │
+│  e / ge          end of word / end of previous                  │
+│  0  ^  $         line start / first non-blank / end             │
+│  gg / G          start / end of file                            │
+│  {n}G            go to line n                                   │
+│  f{c} / F{c}     to char c forward / backward                   │
+│  t{c} / T{c}     till char c forward / backward                 │
+│  ;  /  ,         repeat f/t forward / backward                  │
+│  %               jump to matching ( ) [ ] { }                   │
+│  {  /  }         previous / next paragraph                      │
+│  H  M  L         top / middle / bottom of screen                │
+│  Ctrl-d / Ctrl-u half screen down / up                          │
+│  zz zt zb        line to center / top / bottom                  │
+│  Ctrl-o / Ctrl-i back / forward in jump list                    │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ EDITING ────────────────────────────────────────────────────────┐
+│  x / X           delete char under / before cursor              │
+│  r{c}            replace char with c                            │
+│  s / S           substitute char / line                         │
+│  d{m} dd D       delete motion / line / to eol                  │
+│  c{m} cc C       change motion / line / to eol                  │
+│  y{m} yy         yank motion / line                             │
+│  p / P           put after / before cursor                      │
+│  u / Ctrl-r      undo / redo                                    │
+│  .               repeat last change                             │
+│  J / gJ          join lines with / without space                │
+│  >> << ==        indent / unindent / auto-indent                │
+│  ~               toggle char case                               │
+│  Ctrl-a / Ctrl-x increment / decrement number                   │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ TEXT OBJECTS ───────────────────────────────────────────────────┐
+│  iw / aw         word / word with whitespace                    │
+│  i" i' i`        inside quotes ( a" with them )                 │
+│  i( i[ i{ i<     inside brackets ( a( with them )               │
+│  it / at         inside tag / with tag                          │
+│  ip / ap         paragraph                                      │
+│  is / as         sentence                                       │
+│  examples        ci"  di(  yap  vit  dap                        │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ SEARCH & REPLACE ───────────────────────────────────────────────┐
+│  /text  ?text    search forward / backward                      │
+│  n / N           next / previous match                          │
+│  * / #           word under cursor fwd / back                   │
+│  :%s/old/new/g   replace in whole file                          │
+│  :%s/old/new/gc  ...confirm each replacement                    │
+│  :noh            clear search highlight                         │
+│  :g/pat/d        delete lines matching pat                      │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ REGISTERS ──────────────────────────────────────────────────────┐
+│  "{a-z}y  "{a-z}pyank / put via named register                  │
+│  "+y  "+p        system clipboard                               │
+│  "0p             last yank (delete keeps it)                    │
+│  "_d             delete to black hole                           │
+│  :reg            show register contents                         │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ MACROS ─────────────────────────────────────────────────────────┐
+│  qa ... q        record macro into register a                   │
+│  @a / @@         run / repeat last                              │
+│  10@a            run 10 times                                   │
+│  :'<,'>norm @a   run on each selected line                      │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ MARKS ──────────────────────────────────────────────────────────┐
+│  ma / mA         file mark / global mark                        │
+│  `a / 'a         to mark: exact pos / line start                │
+│  ``  /  `.       before last jump / last change                 │
+│  :marks          list marks                                     │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ BUFFERS · WINDOWS · TABS ───────────────────────────────────────┐
+│  :e file         open file                                      │
+│  :w :q :wq :q!   write / quit / both / force                    │
+│  :ls / :b {n}    list buffers / switch                          │
+│  :bn :bp :bd     next / prev / delete buffer                    │
+│  Ctrl-^          alternate buffer                               │
+│  :sp / :vsp      horizontal / vertical split                    │
+│  Ctrl-w h j k l  move between windows                           │
+│  Ctrl-w q / o    close window / close others                    │
+│  Ctrl-w =        equalize window sizes                          │
+│  :tabnew / :tabc new tab / close tab                            │
+│  gt / gT         next / previous tab                            │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ FOLDING ────────────────────────────────────────────────────────┐
+│  za              toggle fold                                    │
+│  zo / zc         open / close fold                              │
+│  zR / zM         open all / close all                           │
+│  zj / zk         to next / previous fold                        │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ MISC ───────────────────────────────────────────────────────────┐
+│  ZZ / ZQ         save & quit / quit no save                     │
+│  :!cmd           run shell command                              │
+│  :r !cmd / :r fileread output / file                            │
+│  gd / gf         go to definition / open file                   │
+│  K               doc for word under cursor                      │
+│  Ctrl-g          file name and position                         │
+│  :set nu rnu     relative line numbers                          │
+│  :h {topic}      help ( :h quickref )                           │
+└──────────────────────────────────────────────────────────────────┘
+
+practice: vimtutor    ·    full docs: https://vimhelp.org

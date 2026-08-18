@@ -44,7 +44,7 @@ enew
 let s:windows = winnr('$')
 silent! call trainer#cheatsheet()
 call assert_equal(s:windows, winnr('$'), 'no window is opened for a missing file')
-let g:trainer_cheatsheet = g:test_root . '/data/cheatsheet_en.md'
+let g:trainer_cheatsheet = g:test_root . '/data/cheatsheet_en.txt'
 
 " the cheatsheet opens as a scratch copy and reuses its buffer
 enew
@@ -71,7 +71,7 @@ call feedkeys('q', 'xt')
 " edit! — the buffer we came from is modified and must be abandoned, otherwise
 " E37 leaves us looking at the wrong buffer
 execute 'edit! ' . fnameescape(g:trainer_cheatsheet)
-call assert_equal('cheatsheet_en.md', fnamemodify(bufname('%'), ':t'),
+call assert_equal('cheatsheet_en.txt', fnamemodify(bufname('%'), ':t'),
       \ 'we really are in the cheatsheet file')
 call assert_equal(1, &modifiable, 'the real file is not locked')
 call assert_equal(0, &readonly, 'nor read-only')
