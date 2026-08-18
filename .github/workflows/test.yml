@@ -1,0 +1,23 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # v8.2.4419 is where getcharstr() landed — the oldest version the keys
+        # engine can run on, and the one README promises
+        vim: [v8.2.4419, stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          version: ${{ matrix.vim }}
+      - run: vim --version | head -2
+      - run: ./test/run.sh

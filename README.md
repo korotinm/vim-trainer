@@ -173,8 +173,23 @@ would carry it; below that it is just a longer name for the `id`.
 1. Add your object to [`data/drills.json`](data/drills.json), with a unique
    `id` and a `tags` list that matches the existing ones.
 2. `:TrainerReload`, then `:Trainer <your-id>` — solve it once, and for a keys
-   drill try a second route to the same text to check `targets` is honest.
-3. Open a merge request with just that file changed.
+   drill try a second route to the same state to check `targets` is honest.
+3. Run `./test/run.sh` — the suite loads the shipped catalog, so a malformed
+   drill fails it.
+4. Open a merge request with just that file changed.
+
+## Tests
+
+```bash
+./test/run.sh          # everything
+./test/run.sh unit     # no terminal needed
+./test/run.sh pty      # drives Vim through a pseudo terminal
+```
+
+`test/unit/` uses Vim's own `assert_*` functions and needs nothing installed.
+`test/pty/` exists because the keys engine reads with `getcharstr()`, which
+only works on a real tty: those suites run Vim under `script(1)` and read what
+it painted on the screen. Set `VIM_BIN` to test another binary.
 
 Good drills come from your own misses: the command you look up every time, the
 text object you never reach for. `:TrainerStats` shows which ones those are.
