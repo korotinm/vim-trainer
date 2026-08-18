@@ -15,7 +15,7 @@ jobs:
         # engine can run on, and the one README promises
         vim: [v8.2.4419, stable, nightly]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: rhysd/action-setup-vim@v1
         with:
           version: ${{ matrix.vim }}
