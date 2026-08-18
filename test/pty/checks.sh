@@ -56,4 +56,12 @@ assert_ret timeout 'a fold of the wrong size is not accepted'
 run_drill fold-to-end 'zfG'
 assert_ret 1 'folding to the end of the file counts'
 
+# a drill whose reference answer changes nothing would be "solved" by the first
+# keystroke; the engine refuses to run it instead
+run_drill target-does-nothing 'f' "$ROOT/test/fixtures/broken.json"
+assert_ret 0 'a no-op reference answer is refused, not silently solved'
+assert_screen 'Broken drill' 'and the drill says so'
+run_drill text-target-does-nothing 'x' "$ROOT/test/fixtures/broken.json"
+assert_ret 0 'the same holds for a text drill'
+
 finish 'state checks'
