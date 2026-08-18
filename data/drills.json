@@ -5,6 +5,7 @@
     "desc": "Delete the word under the cursor",
     "start": "the quick brown fox",
     "targets": ["dw", "daw", "de"],
+    "hint": "d{motion}",
     "tags": ["operators"]
   },
   {
@@ -13,6 +14,7 @@
     "desc": "Delete from the cursor to end of line",
     "start": "keep this cut the rest",
     "targets": ["D", "d$"],
+    "hint": "D",
     "tags": ["operators"]
   },
   {
@@ -21,6 +23,7 @@
     "desc": "Join this line with the next one",
     "start": "line one\nline two",
     "targets": ["J"],
+    "hint": "J",
     "tags": ["editing"]
   },
   {
@@ -29,7 +32,71 @@
     "desc": "Indent the current line",
     "start": "shift me right",
     "targets": [">>"],
+    "hint": ">>",
     "tags": ["editing"]
+  },
+  {
+    "id": "find-char",
+    "engine": "keys",
+    "check": "cursor",
+    "desc": "Jump to the x of \"fox\"",
+    "start": "the quick brown fox jumps",
+    "targets": ["fx"],
+    "hint": "f{char}",
+    "tags": ["motions"]
+  },
+  {
+    "id": "yank-to-register",
+    "engine": "keys",
+    "check": "register",
+    "check_arg": "a",
+    "desc": "Yank the first word into register a",
+    "start": "copy this word",
+    "targets": ["\"ayw", "\"aye"],
+    "hint": "\"{reg}y{motion}",
+    "tags": ["registers"]
+  },
+  {
+    "id": "mark-third-line",
+    "engine": "keys",
+    "check": "mark",
+    "check_arg": "a",
+    "desc": "Put mark a on the third line",
+    "start": "alpha\nbeta\ngamma\ndelta",
+    "targets": ["3Gma", "jjma"],
+    "hint": "m{a}",
+    "tags": ["marks"]
+  },
+  {
+    "id": "mark-last-line",
+    "engine": "keys",
+    "check": "mark",
+    "check_arg": "t",
+    "desc": "Put mark t on the last line",
+    "start": "alpha\nbeta\ngamma\ndelta",
+    "targets": ["Gmt"],
+    "hint": "m{a}",
+    "tags": ["marks"]
+  },
+  {
+    "id": "fold-two-lines",
+    "engine": "keys",
+    "check": "fold",
+    "desc": "Fold this line together with the next one",
+    "start": "alpha\nbeta\ngamma\ndelta",
+    "targets": ["zfj"],
+    "hint": "zf{motion}",
+    "tags": ["folds"]
+  },
+  {
+    "id": "fold-to-end",
+    "engine": "keys",
+    "check": "fold",
+    "desc": "Fold everything from here to the end of the file",
+    "start": "alpha\nbeta\ngamma\ndelta",
+    "targets": ["zfG"],
+    "hint": "zf{motion}",
+    "tags": ["folds"]
   },
   {
     "id": "change-word",

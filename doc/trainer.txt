@@ -21,8 +21,10 @@ CONTENTS					*trainer-contents*
 vim-trainer opens a scratch buffer with a small task ("delete the word under
 the cursor"), checks how you solved it, and keeps score across sessions.
 
-Both engines judge the buffer you end up with, never the keys you happened to
-press — any route to the right text counts.  They differ in how they watch:
+Both engines judge the state you end up in, never the keys you happened to
+press — any route to it counts.  Normally that state is the buffer text; a keys
+drill can watch the cursor, a register, a mark or the folds instead, see
+|trainer-checks|.  The engines differ in how they watch:
 
 keys	Reads your keystrokes with |getcharstr()| and replays the whole
 	sequence on the buffer after every key, so you see the effect as you
@@ -80,11 +82,12 @@ advances a session (see |:TrainerSession|).
 			either order; a bare number is the count.
 
 						*:TrainerHint*
-:TrainerHint		Reveal the hint of the goal drill in the current
-			buffer.  Hints are never shown on their own — seeing
-			"ciw" above the task leaves nothing to solve.  Inside
-			a drill <F1> does the same; from Insert mode press
-			<Esc> first.
+:TrainerHint		Reveal the hint of the drill in the current buffer.
+			Hints are never shown on their own — seeing "ciw"
+			above the task leaves nothing to solve.  Inside any
+			drill <F1> does the same; from Insert mode press <Esc>
+			first.  In a keys drill <F1> is read as a hint request
+			rather than an answer, so it costs no keystrokes.
 
 						*:TrainerStop*
 :TrainerStop		Abandon the running session.  Drills already finished
@@ -145,7 +148,7 @@ adding an exercise means adding an object, never touching the plugin.
 	    "desc": "Delete the word under the cursor",
 	    "start": "the quick brown fox",
 	    "targets": ["dw", "daw", "de"],
-	    "tags": ["operators", "words"]
+	    "tags": ["operators"]
 	  },
 	  {
 	    "id": "change-word",
@@ -176,26 +179,58 @@ Fields ~
 		the keys engine, where it overrides the derived results —
 		useful when replaying "targets" would not be reliable.
 		Trailing whitespace is ignored on every line.
-	hint	goal engine only, optional: revealed by |:TrainerHint|, never
-		shown before you ask for it.
+	hint	Optional, both engines: revealed by |:TrainerHint| or <F1>,
+		never shown before you ask for it.  In a keys drill <F1> is
+		not counted as a keystroke.
+	check	keys engine only, optional: what the drill is judged by.
+		"text" (default), "cursor", "register", "mark" or "fold",
+		see |trainer-checks|.
+	check_arg
+		The register or mark the check looks at, one character.
+		Required by "register" and "mark".
 	tags	Optional list of strings, used by |:Trainer| {tag}.  Pick from
 		the vocabulary below, one or two per drill.
 
+Checks ~
+						*trainer-checks*
+By default a drill is judged by the buffer text, which leaves out every key
+that changes something else.  "check" picks what the reference answers in
+"targets" are compared on: >
+
+	text		the buffer contents (default)
+	cursor		[line, column] — motions, searches, jumps
+	register	contents and type of the register in "check_arg"
+	mark		position of the mark in "check_arg"
+	fold		which lines are folded away
+<
+Anything other than "text" requires engine "keys": the state is reconstructed
+by replaying the keys from the starting text, and the goal engine would fire
+the moment the cursor merely passed through the right spot.
+
+Registers are global, so a drill clears the one it uses before every replay and
+restores your own contents when it ends.  Marks are buffer-local and the drill
+buffer is a scratch one, so nothing of yours is touched.
+
+Windows and buffers are deliberately absent: a key that moves focus would send
+the next replay — which happens after every keystroke — into another buffer.
+
 Tags ~
 						*trainer-tags*
-Both engines judge the buffer text, so a drill has to end in a text difference.
-A key that only moves the cursor, sets a mark, folds a region or switches
-window changes nothing either engine can see, and no drill should rely on it —
-which is why this list is short: >
+The first tag says what kind of move a drill is, the second narrows the
+construct.  The check each kind needs is on the right: >
 
-	operators	d c y > = gu gU with a motion or a text object
-	text-objects	iw aw i( a" ip it
-	editing		single edits: x r J >> ~ . u CTRL-R
-	modes		i a I A o O gi R — the insert is the change
-	replace		:s///, :g, &
-	visual		v V CTRL-V plus an edit on the selection
-	macros		q and @, when the macro edits
-	registers	"ay and "ap — the drill has to end in a put
+	operators	d c y > = gu gU with a motion or object   text
+	text-objects	iw aw i( a" ip it                        text
+	editing		single edits: x r J >> ~ . u CTRL-R       text
+	modes		i a I A o O gi R                          text
+	replace		:s///, :g, &                              text
+	visual		v V CTRL-V plus an edit on the selection  text
+	macros		q and @, when the macro edits             text
+	motions		w b e f{c} t{c} { } gg G                  cursor
+	search		/ ? n N * #                               cursor
+	marks		m{a} `a 'a                                mark
+	registers	"ay "ap :let @a                           register
+	folds		zf zo zc za                               fold
 <
 The first tag says what kind of move it is, the second narrows the construct:
 `ciw` is "operators" plus "text-objects".  Add a new tag only once three drills
@@ -267,10 +302,13 @@ trainer#start({drill})		Run one drill given as a dictionary in the
 				|trainer-drills| format.
 
 						*trainer#challenge()*
-trainer#challenge({desc}, {start}, {targets} [, {goal}])
+trainer#challenge({desc}, {start}, {targets} [, {options}])
 				Keys engine, called directly.  Returns 1 on a
-				correct answer, 0 otherwise.  {goal} overrides
-				the results derived from {targets}.
+				correct answer, 0 otherwise.  {options} is a
+				dictionary with any of "goal", "check" and
+				"check_arg"; a plain string is taken as "goal"
+				and overrides the results derived from
+				{targets}.
 
 						*trainer#goal()*
 trainer#goal({desc}, {start}, {goal}, {hint})
