@@ -44,7 +44,7 @@ call writefile(['ret=' . g:r, 'reg_a=' . getreg('a')], '$result')
 sleep 300m
 qall!
 EOF
-  { sleep 0.8; printf '%s' "$keys"; sleep 2.5; } |
+  { sleep 0.6; printf "%s" "$keys"; sleep 1.6; } |
     TERM=xterm-256color pty_run "vim -u NONE -N -S $script_file" "$log"
   RET="$(sed -n 's/^ret=//p' "$result" 2>/dev/null || echo 'no result')"
   REG_A="$(sed -n 's/^reg_a=//p' "$result" 2>/dev/null || true)"

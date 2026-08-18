@@ -487,6 +487,18 @@ function! trainer#challenge(desc, start, targets, ...) abort
   let l:wants = !empty(l:goal)
         \ ? [s:strip(split(l:goal, "\n"))]
         \ : map(copy(a:targets), {_, k -> s:derive(a:start, k, l:check, l:arg)})
+  " a reference answer that changes nothing leaves the expected state equal to
+  " the starting one, and the drill would be "solved" by the first keystroke.
+  " that is a broken catalog entry, so say so instead of pretending to teach
+  call s:apply(a:start, '', l:reg)
+  let l:initial = s:snapshot(l:check, l:arg)
+  if s:matches(l:initial, l:wants)
+    call s:mark(l:buf, 'skip')
+    call s:fail(a:desc . ': a reference answer changes nothing, check "targets"')
+    echo 'Broken drill   q to close'
+    return 0
+  endif
+
   let l:par = min(map(copy(a:targets), 'strchars(v:val)'))
   let l:limit = max([l:par * 4, l:par + 6])   " no grinding the answer out
   let l:keys = ''

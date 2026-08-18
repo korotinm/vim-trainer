@@ -1,0 +1,19 @@
+[
+  {
+    "id": "target-does-nothing",
+    "engine": "keys",
+    "check": "cursor",
+    "desc": "Jump to the z",
+    "start": "no such letter here",
+    "targets": ["fz"],
+    "tags": ["motions"]
+  },
+  {
+    "id": "text-target-does-nothing",
+    "engine": "keys",
+    "desc": "Delete the word",
+    "start": "one two",
+    "targets": ["zz"],
+    "tags": ["operators"]
+  }
+]
