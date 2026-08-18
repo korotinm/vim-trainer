@@ -7,9 +7,10 @@ it, the plugin checks the answer and keeps score across sessions.
 
 ## Two engines
 
-Both judge the text you end up with, never the keys you happened to press —
-`dW` and `4x` solve a `dw` drill just as well as `dw`. They differ in how they
-watch you:
+Both judge the state you end up in, never the keys you happened to press —
+`dW` and `4x` solve a `dw` drill just as well as `dw`. Usually that state is the
+buffer text; a keys drill can watch the cursor, a register, a mark or the folds
+instead. They differ in how they watch you:
 
 - **`keys`** — keystrokes are read with `getcharstr()` and the whole sequence is
   replayed on the buffer after every key, so the effect is visible as you type
@@ -56,7 +57,7 @@ vim -u NONE -c 'helptags ~/.vim/pack/plugins/start/vim-trainer/doc' -c q
 | `:Trainer text-objects` | random drill with that tag |
 | `:Trainer weak` | random drill among those you keep missing |
 | `:TrainerSession [n] [id\|tag\|weak]` | `n` drills in a row (default 5) with a score |
-| `:TrainerHint` | reveal the hint of the current goal drill (`<F1>` inside it) |
+| `:TrainerHint` | reveal the drill's hint (`<F1>` inside it; free in keys drills) |
 | `:TrainerStop` | abandon the session |
 | `:TrainerStats` | totals, streak, per-drill table, weakest first |
 | `:TrainerResetStats[!]` | erase progress |
@@ -107,33 +108,61 @@ The file is a plain list of objects:
 ```
 
 `engine` is `keys` (needs `targets`) or `goal` (needs `goal`, the expected
-text; `hint` is optional). `tags` feed `:Trainer {tag}`. A broken entry is
-reported and skipped, the rest still load; run `:TrainerReload` to pick up
-edits.
+text). `hint` works in both and is only shown on `<F1>`. `tags` feed
+`:Trainer {tag}`. A broken entry is reported and skipped, the rest still load;
+run `:TrainerReload` to pick up edits.
+
+By default a drill is judged by the buffer text. `check` changes what is
+compared, so drills can cover keys that leave the text alone:
+
+```json
+{
+  "id": "find-char",
+  "engine": "keys",
+  "check": "cursor",
+  "desc": "Jump to the x of \"fox\"",
+  "start": "the quick brown fox jumps",
+  "targets": ["fx"],
+  "tags": ["motions"]
+}
+```
+
+`check` is `text` (default), `cursor`, `register`, `mark` or `fold`; the last
+two, plus `register`, name the register or mark in `check_arg`. Anything other
+than `text` needs `engine: "keys"` — the goal engine watches events and would
+fire the moment the cursor merely passed through the right spot. Registers are
+global, so a drill wipes the one it uses between attempts and hands it back
+untouched afterwards.
 
 `targets` is not a whitelist: each answer is replayed on the starting text when
-the drill opens, and anything you type that reaches one of those results counts.
+the drill opens, and anything you type that reaches the same state counts.
 List several only when they lead to genuinely different but equally correct
 text — `dw` and `de` differ by a leading space, so both are listed. The shortest
 one sets par. A `goal` on a keys drill overrides the derived results.
 
 ### Tags
 
-Both engines judge the buffer text, so **a drill has to end in a text
-difference** — anything that only moves the cursor, sets a mark, folds a
-region or switches window cannot be checked and does not belong here. That is
-why the vocabulary is short. Use these tags, one or two per drill:
+Use these tags, one or two per drill. The right-hand column is the `check` a
+drill of that kind needs (see below):
 
-| tag | what it covers |
-|---|---|
-| `operators` | `d` `c` `y` `>` `=` `gu` `gU` with a motion or a text object |
-| `text-objects` | `iw` `aw` `i(` `a"` `ip` `it` |
-| `editing` | single edits: `x` `r` `J` `>>` `~` `.` `u` `Ctrl-r` |
-| `modes` | `i` `a` `I` `A` `o` `O` `gi` `R` — the insert itself is the change |
-| `visual` | `v` `V` `Ctrl-v` **plus** an edit on the selection |
-| `replace` | `:s///`, `:g`, `&` |
-| `macros` | `q` `@`, when the macro edits |
-| `registers` | `"ay` and `"ap` — the drill has to end in a put |
+| tag | what it covers | check |
+|---|---|---|
+| `operators` | `d` `c` `y` `>` `=` `gu` `gU` with a motion or a text object | text |
+| `text-objects` | `iw` `aw` `i(` `a"` `ip` `it` | text |
+| `editing` | single edits: `x` `r` `J` `>>` `~` `.` `u` `Ctrl-r` | text |
+| `modes` | `i` `a` `I` `A` `o` `O` `gi` `R` | text |
+| `visual` | `v` `V` `Ctrl-v` plus an edit on the selection | text |
+| `replace` | `:s///`, `:g`, `&` | text |
+| `macros` | `q` `@`, when the macro edits | text |
+| `motions` | `w` `b` `e` `f{c}` `t{c}` `{` `}` `gg` `G` | `cursor` |
+| `search` | `/` `?` `n` `N` `*` `#` | `cursor` |
+| `marks` | `m{a}`, `` `a ``, `'a` | `mark` |
+| `registers` | `"ay` `"ap` `:let @a` | `register` |
+| `folds` | `zf` `zo` `zc` `za` | `fold` |
+
+Window and buffer switching has no tag on purpose: a drill is replayed from
+its starting text after every keystroke, and a key that moves focus would send
+the next replay into somebody else's buffer.
 
 The first tag says what kind of move it is, the second narrows the construct:
 `ciw` is `operators` + `text-objects`. Add a new tag only once three drills

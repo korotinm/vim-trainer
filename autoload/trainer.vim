@@ -4,6 +4,8 @@
 let s:drills = []
 let s:last_id = ''
 let s:seed = exists('*srand') ? srand() : []
+" what a drill is judged by; "text" is the default, the rest need engine "keys"
+let s:checks = ['text', 'cursor', 'register', 'mark', 'fold']
 
 function! s:fail(msg) abort
   echohl ErrorMsg | echomsg 'vim-trainer: ' . a:msg | echohl NONE
@@ -32,6 +34,22 @@ function! s:validate(d, i) abort
     endif
   else
     return a:d.id . ': unknown engine "' . a:d.engine . '"'
+  endif
+
+  let l:check = get(a:d, 'check', 'text')
+  if index(s:checks, l:check) < 0
+    return a:d.id . ': unknown check "' . string(l:check) . '"'
+  endif
+  if l:check !=# 'text'
+    " watching state needs the replay of engine "keys": the goal engine would
+    " fire the moment the cursor merely passes through the right spot
+    if a:d.engine !=# 'keys'
+      return a:d.id . ': check "' . l:check . '" needs engine "keys"'
+    endif
+    if index(['register', 'mark'], l:check) >= 0
+          \ && strchars(get(a:d, 'check_arg', '')) != 1
+      return a:d.id . ': check "' . l:check . '" needs a one-character "check_arg"'
+    endif
   endif
   return ''
 endfunction
@@ -124,9 +142,12 @@ function! trainer#start(drill) abort
   let s:last_id = a:drill.id
   let s:pending_id = a:drill.id      " s:open_drill picks this up and scores it
   if a:drill.engine ==# 'keys'
-    " "goal" is optional here: the expected text is normally derived from targets
-    return trainer#challenge(a:drill.desc, a:drill.start, a:drill.targets,
-          \ get(a:drill, 'goal', ''))
+    " "goal" is optional here: the expected state is normally derived from targets
+    return trainer#challenge(a:drill.desc, a:drill.start, a:drill.targets, {
+          \ 'goal': get(a:drill, 'goal', ''),
+          \ 'hint': get(a:drill, 'hint', ''),
+          \ 'check': get(a:drill, 'check', 'text'),
+          \ 'check_arg': get(a:drill, 'check_arg', '')})
   endif
   return trainer#goal(a:drill.desc, a:drill.start, a:drill.goal, get(a:drill, 'hint', ''))
 endfunction
@@ -373,12 +394,31 @@ endfunction
 " starting text and the whole sequence runs again. that way an unfinished
 " command (a lone d) simply does nothing and the intermediate states stay
 " honest — otherwise a pending operator would be anyone's guess
-function! s:apply(start, keys) abort
+function! s:apply(start, keys, ...) abort
+  " a:1 is the register a "register" drill works with: it lives outside the
+  " buffer, so rolling the text back is not enough to undo the previous replay
+  if a:0 && !empty(a:1) | call setreg(a:1, []) | endif
   silent! keepjumps %delete _
   call setline(1, split(a:start, "\n"))
   call cursor(1, 1)
   " the trailing Esc closes whatever is unfinished: cw…, a pending operator, a count
   call feedkeys(a:keys . "\<Esc>", 'nx')
+endfunction
+
+" what the drill is judged by. everything here has to survive a replay from the
+" starting text, which is why windows and buffers are not on the list: switching
+" one would send the next replay into somebody else's buffer
+function! s:snapshot(check, arg) abort
+  if a:check ==# 'cursor'
+    return [line('.'), col('.')]
+  elseif a:check ==# 'register'
+    return [getreg(a:arg), getregtype(a:arg)]
+  elseif a:check ==# 'mark'
+    return getpos("'" . a:arg)[1:2]
+  elseif a:check ==# 'fold'
+    return map(range(1, line('$')), 'foldclosed(v:val)')
+  endif
+  return s:strip(getline(1, '$'))
 endfunction
 
 " compare by hand: index() would match strings with an eye on 'ignorecase'
@@ -389,11 +429,17 @@ function! s:matches(lines, wants) abort
   return 0
 endfunction
 
-" reference result: replay one of the targets and keep whatever came out
-function! s:derive(start, keys) abort
-  call s:apply(a:start, a:keys)
-  let l:want = s:strip(getline(1, '$'))
-  call s:apply(a:start, '')
+" check_arg names a register for one kind of check and a mark for another; only
+" the register has to be wiped between replays, and only that one may be touched
+function! s:reg_of(check, arg) abort
+  return a:check ==# 'register' ? a:arg : ''
+endfunction
+
+" reference state: replay one of the targets and keep whatever came out
+function! s:derive(start, keys, check, arg) abort
+  call s:apply(a:start, a:keys, s:reg_of(a:check, a:arg))
+  let l:want = s:snapshot(a:check, a:arg)
+  call s:apply(a:start, '', s:reg_of(a:check, a:arg))
   return l:want
 endfunction
 
@@ -404,6 +450,9 @@ function! s:open_drill(start) abort
   " after a correct answer the buffer turns nomodifiable — without this mapping
   " there is no way out of it
   nnoremap <silent> <buffer> q :bwipeout!<CR>
+  " every drill buffer answers <F1>, otherwise it falls through to Vim's help
+  let b:trainer_hint = ''
+  nnoremap <silent> <buffer> <F1> :TrainerHint<CR>
   call setline(1, split(a:start, "\n"))
   call cursor(1, 1)
   " a drill counts as skipped until an engine says otherwise
@@ -412,31 +461,55 @@ function! s:open_drill(start) abort
   execute 'autocmd TrainerDrill BufWipeout <buffer> call s:closed(' . bufnr('%') . ')'
 endfunction
 
-" engine 1: keys are applied to the buffer and the result is what counts
+" engine 1: keys are applied to the buffer and the outcome is what counts
 " (dw, D, J, >>). targets are the reference answers: they set par and provide
-" the expected text, but any route to the same buffer is accepted
+" the expected state, but any route to the same state is accepted.
+" the optional fourth argument is either a goal string (kept for older callers)
+" or {'goal': …, 'check': …, 'check_arg': …}
 function! trainer#challenge(desc, start, targets, ...) abort
+  let l:opt = a:0 ? (type(a:1) == v:t_dict ? a:1 : {'goal': a:1}) : {}
+  let l:goal = get(l:opt, 'goal', '')
+  let l:check = get(l:opt, 'check', 'text')
+  let l:arg = get(l:opt, 'check_arg', '')
+  let l:reg = s:reg_of(l:check, l:arg)
+
   call s:open_drill(a:start)
   let l:buf = bufnr('%')
+  let l:hint = get(l:opt, 'hint', '')
+  let b:trainer_hint = l:hint            " for <F1> once the drill is over
+  let l:show_hint = 0
+  if l:check ==# 'fold' | setlocal foldmethod=manual foldlevel=0 | endif
+  " registers are global, so a drill borrows one and gives it back
+  let l:saved = l:check ==# 'register' ? [getreg(l:arg), getregtype(l:arg)] : []
 
-  " there can be several reference results: dw and de both "delete a word" but
+  " there can be several reference states: dw and de both "delete a word" but
   " leave different text behind, and both have to count
-  let l:wants = a:0 && !empty(a:1)
-        \ ? [s:strip(split(a:1, "\n"))]
-        \ : map(copy(a:targets), 's:derive(a:start, v:val)')
+  let l:wants = !empty(l:goal)
+        \ ? [s:strip(split(l:goal, "\n"))]
+        \ : map(copy(a:targets), {_, k -> s:derive(a:start, k, l:check, l:arg)})
   let l:par = min(map(copy(a:targets), 'strchars(v:val)'))
   let l:limit = max([l:par * 4, l:par + 6])   " no grinding the answer out
   let l:keys = ''
 
+  try
   while 1
     redraw
-    echo a:desc . '   [' . l:keys . ']   (Esc to skip)'
+    echo a:desc . '   [' . l:keys . ']'
+          \ . (l:show_hint ? '   hint: ' . l:hint : '')
+          \ . (empty(l:hint) || l:show_hint ? '' : '   (<F1> for a hint)')
+          \ . '   (Esc to skip)'
     let l:c = getcharstr()
+    " getcharstr() bypasses mappings, so <F1> is handled here — and it must not
+    " count as a keystroke against par
+    if l:c ==# "\<F1>"
+      let l:show_hint = 1
+      continue
+    endif
     " an empty string means no more input is coming (end of a script, closed
     " terminal) — without this the loop would spin on nothing
     if l:c ==# "\<Esc>" || empty(l:c)
       call s:mark(l:buf, 'skip')
-      call s:apply(a:start, '')
+      call s:apply(a:start, '', l:reg)
       redraw
       echo 'Skipped   (expected: ' . join(a:targets, ', ') . ')   q to close'
       return 0
@@ -453,9 +526,9 @@ function! trainer#challenge(desc, start, targets, ...) abort
       let l:drain += 1
     endwhile
 
-    call s:apply(a:start, l:keys)
+    call s:apply(a:start, l:keys, l:reg)
 
-    if s:matches(s:strip(getline(1, '$')), l:wants)
+    if s:matches(s:snapshot(l:check, l:arg), l:wants)
       call s:mark(l:buf, 'ok')
       redraw
       let l:n = strchars(l:keys)
@@ -479,6 +552,9 @@ function! trainer#challenge(desc, start, targets, ...) abort
       return 0
     endif
   endwhile
+  finally
+    if !empty(l:saved) | call setreg(l:arg, l:saved[0], l:saved[1]) | endif
+  endtry
 endfunction
 
 function! trainer#hint() abort
