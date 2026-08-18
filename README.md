@@ -1,37 +1,12 @@
 # vim-trainer
 
-Drills for Vim keys, with scoring. A drill opens in a scratch split, you solve
-it, the plugin checks the answer and keeps score across sessions.
+The commands you keep looking up, until you stop looking them up.
+
+Small drills inside your own Vim: a task, a scratch buffer, and a check. Solve
+it any way you like — the plugin looks at the result, not at the keys you
+happened to press — and it remembers how you are doing.
 
 ![Demo](media/demo.gif)
-
-## Two engines
-
-Both judge the state you end up in, never the keys you happened to press —
-`dW` and `4x` solve a `dw` drill just as well as `dw`. Usually that state is the
-buffer text; a keys drill can watch the cursor, a register, a mark or the folds
-instead. They differ in how they watch you:
-
-- **`keys`** — keystrokes are read with `getcharstr()` and the whole sequence is
-  replayed on the buffer after every key, so the effect is visible as you type
-  and keystrokes can be counted. For commands that stay in Normal mode: `dw`,
-  `D`, `J`, `>>`. `<Esc>` skips.
-- **`goal`** — you edit the buffer freely and the result is compared once you
-  stop. For everything whose keystrokes cannot be captured, because you end up
-  in Insert mode or on the command line: `ciw`, `di"`, `:s/…`.
-
-A keys drill also grades economy: `par` is the shortest listed answer, and
-solving it the long way still counts but says so.
-
-```
-Correct: daw (3 keys, par 2: dw, daw, de)
-```
-
-Grinding the answer out one `x` at a time will not work — after `par * 4`
-keystrokes the drill gives up and records a miss.
-
-Every drill opens in a split; `q` closes it, and that is also what advances a
-session.
 
 ## Install
 
@@ -48,52 +23,31 @@ git clone https://github.com/korotinm/vim-trainer ~/.vim/pack/plugins/start/vim-
 vim -u NONE -c 'helptags ~/.vim/pack/plugins/start/vim-trainer/doc' -c q
 ```
 
-## Usage
-
-| Command | |
-|---|---|
-| `:Trainer` | random drill |
-| `:Trainer delete-word` | one specific drill, by id |
-| `:Trainer text-objects` | random drill with that tag |
-| `:Trainer weak` | random drill among those you keep missing |
-| `:TrainerSession [n] [id\|tag\|weak]` | `n` drills in a row (default 5) with a score |
-| `:TrainerHint` | reveal the drill's hint (`<F1>` inside it; free in keys drills) |
-| `:TrainerStop` | abandon the session |
-| `:TrainerStats` | totals, streak, per-drill table, weakest first |
-| `:TrainerResetStats[!]` | erase progress |
-| `:TrainerList` | show the catalog |
-| `:TrainerReload` | re-read the drills file after editing it |
-| `:TrainerCheat` | keymap cheatsheet in a split |
-
-No keys are taken by default. If you want some, hang them on the `<Plug>` names
-yourself — note `nmap`, not `nnoremap`:
+## Use
 
 ```vim
-nmap <leader>d <Plug>(TrainerRun)
-nmap <leader>w <Plug>(TrainerWeak)
-nmap <leader>s <Plug>(TrainerSession)
+:Trainer               " one random drill
+:TrainerSession 10     " ten in a row, with a score at the end
+:Trainer weak          " the ones you keep missing
+:TrainerStats          " how you are doing
 ```
 
-Also available: `<Plug>(TrainerStats)`, `<Plug>(TrainerList)`,
-`<Plug>(TrainerCheat)`.
+Inside a drill: solve the task, then press `q` to close it. `<F1>` shows a
+hint, `<Esc>` skips.
+
+Any route to the right result counts. `dW` and `4x` solve a "delete the word"
+drill just as well as `dw` — and if there was a shorter way, the plugin says so:
 
 ```
-vim-trainer — 11/14 correct (78%)   streak 2, best 5
-
-id                       solved  attempts   rate   last
-delete-in-quotes              1         5    20%   3d ago
-change-word                   2         3    66%   today
-delete-word                   4         4   100%   today
+Correct: daw (3 keys, par 2: dw, daw, de)
 ```
 
-## Adding drills — and sending them back
+No keys are bound by default. `:help vim-trainer` has the rest.
 
-**This is the easiest thing to contribute, and the most useful.** A drill is a
-JSON object, not code: if you keep forgetting a command, add it to
-[`data/drills.json`](data/drills.json) and open a merge request. No Vimscript
-involved, no build step, nothing to learn beyond the fields below.
+## Add your own drill
 
-The file is a plain list of objects:
+A drill is a JSON object in [`data/drills.json`](data/drills.json). No
+Vimscript, no build step:
 
 ```json
 {
@@ -107,43 +61,45 @@ The file is a plain list of objects:
 }
 ```
 
-`engine` is `keys` (needs `targets`) or `goal` (needs `goal`, the expected
-text). `hint` works in both and is only shown on `<F1>`. `tags` feed
-`:Trainer {tag}`. A broken entry is reported and skipped, the rest still load;
-run `:TrainerReload` to pick up edits.
+Then `:TrainerReload` and `:Trainer uppercase-word` to try it out. If it works,
+open a merge request with that one file changed — **it is the most useful thing
+you can send**, and the CI checks the drill for you.
 
-By default a drill is judged by the buffer text. `check` changes what is
-compared, so drills can cover keys that leave the text alone:
+Good drills come from your own misses: the command you look up every time, the
+text object you never reach for. `:TrainerStats` shows which ones those are.
 
-```json
-{
-  "id": "find-char",
-  "engine": "keys",
-  "check": "cursor",
-  "desc": "Jump to the x of \"fox\"",
-  "start": "the quick brown fox jumps",
-  "targets": ["fx"],
-  "tags": ["motions"]
-}
-```
+<details>
+<summary><b>All the fields</b></summary>
 
-`check` is `text` (default), `cursor`, `register`, `mark` or `fold`; the last
-two, plus `register`, name the register or mark in `check_arg`. Anything other
-than `text` needs `engine: "keys"` — the goal engine watches events and would
-fire the moment the cursor merely passed through the right spot. Registers are
-global, so a drill wipes the one it uses between attempts and hands it back
-untouched afterwards.
+| field | |
+|---|---|
+| `id` | unique name; it keys the progress file, so renaming it loses that history |
+| `engine` | `keys` or `goal`, see below |
+| `desc` | the task, shown above the drill |
+| `start` | the starting text; `\n` makes it several lines |
+| `targets` | keys engine: the reference answers |
+| `goal` | goal engine: the expected text |
+| `hint` | optional, shown only on `<F1>` |
+| `check` | what to compare: `text` (default), `cursor`, `register`, `mark`, `fold` |
+| `check_arg` | the register or mark `check` looks at |
+| `tags` | one or two, from the list below |
 
-`targets` is not a whitelist: each answer is replayed on the starting text when
-the drill opens, and anything you type that reaches the same state counts.
-List several only when they lead to genuinely different but equally correct
-text — `dw` and `de` differ by a leading space, so both are listed. The shortest
-one sets par. A `goal` on a keys drill overrides the derived results.
+`targets` is not a whitelist. Each answer is replayed on the starting text when
+the drill opens, and anything you type that reaches the same result counts. The
+shortest one sets par. List several answers only when they lead to genuinely
+different but equally correct results — `dw` and `de` differ by a leading space,
+so both are listed.
 
-### Tags
+A broken entry is reported and skipped; the rest of the catalog still loads.
 
-Use these tags, one or two per drill. The right-hand column is the `check` a
-drill of that kind needs (see below):
+</details>
+
+<details>
+<summary><b>Tags</b></summary>
+
+One or two per drill. The first says what kind of move it is, the second
+narrows the construct: `ciw` is `operators` + `text-objects`. The right-hand
+column is the `check` such a drill needs.
 
 | tag | what it covers | check |
 |---|---|---|
@@ -160,44 +116,90 @@ drill of that kind needs (see below):
 | `registers` | `"ay` `"ap` `:let @a` | `register` |
 | `folds` | `zf` `zo` `zc` `za` | `fold` |
 
-Window and buffer switching has no tag on purpose: a drill is replayed from
-its starting text after every keystroke, and a key that moves focus would send
-the next replay into somebody else's buffer.
+Add a new tag only once three drills would carry it; below that it is just a
+longer name for the `id`. Window and buffer switching has no tag on purpose —
+see the next section for why.
 
-The first tag says what kind of move it is, the second narrows the construct:
-`ciw` is `operators` + `text-objects`. Add a new tag only once three drills
-would carry it; below that it is just a longer name for the `id`.
+</details>
 
-### Sending a drill upstream
+<details>
+<summary><b>How answers are judged</b></summary>
 
-1. Add your object to [`data/drills.json`](data/drills.json), with a unique
-   `id` and a `tags` list that matches the existing ones.
-2. `:TrainerReload`, then `:Trainer <your-id>` — solve it once, and for a keys
-   drill try a second route to the same state to check `targets` is honest.
-3. Run `./test/run.sh` — the suite loads the shipped catalog, so a malformed
-   drill fails it.
-4. Open a merge request with just that file changed.
+Two engines, because not every command can be watched the same way:
 
-## Tests
+- **`keys`** — your keystrokes are read one by one and the whole sequence is
+  replayed on the buffer after each one, so you see the effect as you type and
+  the plugin can count keystrokes. For commands that stay in Normal mode: `dw`,
+  `D`, `J`, `>>`.
+- **`goal`** — you edit the buffer freely and the result is compared once you
+  stop. For everything whose keystrokes cannot be captured, because you end up
+  in Insert mode or on the command line: `ciw`, `di"`, `:s/…`.
 
-```bash
-./test/run.sh          # everything
-./test/run.sh unit     # no terminal needed
-./test/run.sh pty      # drives Vim through a pseudo terminal
+`par` is the shortest listed answer. Solving a drill the long way still counts;
+after `par * 4` keystrokes the drill gives up and records a miss, so it cannot
+be ground out one `x` at a time.
+
+Usually the thing being compared is the buffer text. `check` points it at
+something else — the cursor, a register, a mark, the folds — which is how
+motions and searches get drills at all. Any `check` other than `text` needs the
+keys engine: the goal engine watches events and would fire the moment the
+cursor merely passed through the right spot.
+
+Registers are global, so a drill wipes the one it borrows between attempts and
+hands it back untouched afterwards.
+
+Windows and buffers have no drills: the replay starts from the drill buffer
+after every keystroke, so a key that moves focus would rewrite somebody else's
+buffer.
+
+</details>
+
+<details>
+<summary><b>Every command, and mappings</b></summary>
+
+| command | |
+|---|---|
+| `:Trainer` | random drill |
+| `:Trainer delete-word` | one specific drill, by id |
+| `:Trainer text-objects` | random drill with that tag |
+| `:Trainer weak` | random drill among those you keep missing |
+| `:TrainerSession [n] [id\|tag\|weak]` | `n` drills in a row (default 5) with a score |
+| `:TrainerHint` | reveal the hint (`<F1>` inside a drill; it costs no keystrokes) |
+| `:TrainerStop` | abandon the session |
+| `:TrainerStats` | totals, streak, per-drill table, weakest first |
+| `:TrainerResetStats[!]` | erase progress |
+| `:TrainerList` | show the catalog |
+| `:TrainerReload` | re-read the drills file after editing it |
+| `:TrainerCheat` | keymap cheatsheet in a split |
+
+The plugin binds no keys. If you want some, hang them on the `<Plug>` names —
+note `nmap`, not `nnoremap`:
+
+```vim
+nmap <leader>d <Plug>(TrainerRun)
+nmap <leader>w <Plug>(TrainerWeak)
+nmap <leader>s <Plug>(TrainerSession)
 ```
 
-`test/unit/` uses Vim's own `assert_*` functions and needs nothing installed.
-`test/pty/` exists because the keys engine reads with `getcharstr()`, which
-only works on a real tty: those suites run Vim under `script(1)` and read what
-it painted on the screen. Set `VIM_BIN` to test another binary.
+Also available: `<Plug>(TrainerStats)`, `<Plug>(TrainerList)`,
+`<Plug>(TrainerCheat)`.
 
-Good drills come from your own misses: the command you look up every time, the
-text object you never reach for. `:TrainerStats` shows which ones those are.
+</details>
 
-## Progress
+<details>
+<summary><b>Where the score is kept</b></summary>
 
-Results are written to `$XDG_STATE_HOME/vim-trainer/progress.json`
-(`~/.local/state/…` when that variable is empty) as a drill buffer is closed:
+```
+vim-trainer — 11/14 correct (78%)   streak 2, best 5
+
+id                       solved  attempts   rate   last
+delete-in-quotes              1         5    20%   3d ago
+change-word                   2         3    66%   today
+delete-word                   4         4   100%   today
+```
+
+Results go to `$XDG_STATE_HOME/vim-trainer/progress.json` (`~/.local/state/…`
+when that variable is empty) as each drill closes:
 
 ```json
 {"drills": {"delete-word": {"attempts": 3, "solved": 2, "last": 1786982867}},
@@ -207,21 +209,46 @@ Results are written to `$XDG_STATE_HOME/vim-trainer/progress.json`
 A correct answer extends the streak, a wrong one resets it, and a skip counts
 for nothing at all — pressing `<Esc>` should not spoil your statistics.
 
-## Configuration
+</details>
+
+<details>
+<summary><b>Configuration</b></summary>
 
 ```vim
 let g:trainer_drills     = expand('~/dotfiles/my-drills.json')
-let g:trainer_cheatsheet = expand('~/dotfiles/vim-keys.md')
+let g:trainer_cheatsheet = expand('~/dotfiles/vim-keys.txt')
 let g:trainer_state      = expand('~/dotfiles/vim-trainer.json')
 ```
 
 Set them in your vimrc, before the plugin loads. `:help vim-trainer` documents
 the rest, including the autoload API.
 
+</details>
+
+<details>
+<summary><b>Tests</b></summary>
+
+```bash
+./test/run.sh          # everything
+./test/run.sh unit     # no terminal needed
+./test/run.sh pty      # drives Vim through a pseudo terminal
+```
+
+`test/unit/` uses Vim's own `assert_*` functions and needs nothing installed.
+`test/pty/` exists because the keys engine reads keys from a real tty: those
+suites run Vim under `script(1)` and read what it painted on the screen. Set
+`VIM_BIN` to test another binary.
+
+The suite loads the shipped catalog and solves every drill in it, so a broken
+exercise fails the build.
+
+</details>
+
 ## Requirements
 
-Vim 8.2+ with `+timers` and `json_decode()`; the keys engine needs
-`getcharstr()`.
+Vim 8.2.4419 or newer — that is where `getcharstr()` landed, and the keys
+engine needs it. Also `+timers` and `json_decode()`, which any current build
+has.
 
 ## License
 
