@@ -6,7 +6,7 @@ let s:root = expand('<sfile>:p:h:h')
 " all three paths can be overridden: your own drill catalog, your own
 " cheatsheet, your own place for the progress file
 if !exists('g:trainer_cheatsheet')
-  let g:trainer_cheatsheet = s:root . '/data/cheatsheet_en.md'
+  let g:trainer_cheatsheet = s:root . '/data/cheatsheet_en.txt'
 endif
 if !exists('g:trainer_drills')
   let g:trainer_drills = s:root . '/data/drills.json'
