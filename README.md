@@ -16,12 +16,16 @@ With [vim-plug](https://github.com/junegunn/vim-plug):
 Plug 'korotinm/vim-trainer'
 ```
 
+Then restart Vim and run `:PlugInstall`.
+
 As a native package:
 
 ```bash
 git clone https://github.com/korotinm/vim-trainer ~/.vim/pack/plugins/start/vim-trainer
 vim -u NONE -c 'helptags ~/.vim/pack/plugins/start/vim-trainer/doc' -c q
 ```
+
+Either way, `:TrainerList` should now show the catalog.
 
 ## Use
 
