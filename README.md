@@ -6,6 +6,8 @@ Small drills inside your own Vim: a task, a scratch buffer, and a check. Solve
 it any way you like — the plugin looks at the result, not at the keys you
 happened to press — and it remembers how you are doing.
 
+*One of the [yank.run tools](https://yank.run/tools).*
+
 ![Demo](media/demo.gif)
 
 ## Install
